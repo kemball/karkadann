@@ -29,7 +29,7 @@ def parse_prodigal(prodigal_record):
 	"""Takes the pseudo-fasta and returns a list of SeqFeatures."""
 	for rec in prodigal_record:
 		#each one of these records is a feature
-		m = re.match(">?(\S+)_(\d+) # (\d+) # (\d+) # (-?\d+) # ID=([^;])+",rec.description)
+		m = re.match(">?(\S+)_(\d+) # (\d+) # (\d+) # (-?\d+) # ID=([^;]+);",rec.description)
 		if m:
 			name,id_number,start,end,strand,prod_id = m.groups()
 			start = int(start)
@@ -37,7 +37,7 @@ def parse_prodigal(prodigal_record):
 			strand = int(strand)
 			location = SeqFeature.FeatureLocation(start,end,strand)
 			sequence = str(rec.seq)
-			qualifiers = {'translation':sequence}
+			qualifiers = {'translation':sequence,'protein_id':prod_id}
 			# multiple features go on the same record. This returns the name to keep track of what goes where.
 			feature = SeqFeature.SeqFeature(location=location,type="CDS",strand=strand,id=id_number,qualifiers=qualifiers)
 			yield name,feature
