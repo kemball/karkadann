@@ -38,6 +38,8 @@ def get_cursor():
 	# after yield returns and is prompted to do that same thing again it gets confused and sad.
 	# This looks like a generator, but it's not. It returns many small generators instead of one large 
 	# connection generator. I could also put connection pools etc in here but that's work so I haven't.
+	# the whole point being I don't have to use closing() everywhere, I have thread-safe cursors,
+	# AND I can put in pools later.
 	try:
 		conn = mysql.connect(host=host,user=username,passwd=password,db=dbname)
 		curse = conn.cursor()
@@ -53,20 +55,21 @@ from random import sample
 from string import ascii_lowercase
 def save_record(record,salt=None):
 	if salt:
-		if not os.path.exists(os.path.join(gb_location,str(salt))):
-			SeqIO.write(record,os.path.join(gb_location,str(salt)),'genbank')
-			return str(salt)
+		if not os.path.exists(os.path.join(gb_location,salt)):
+			SeqIO.write(record,os.path.join(gb_location,salt),'genbank')
+			return salt
 		else:
-			return save_record(record,str(salt)+sample(ascii_lowercase,1))
+			return save_record(record,salt+str(sample(ascii_lowercase,1)))
 	else:
-		return save_record(record,sample(ascii_lowercaseq,10))
+		return save_record(record,"".join(sample(ascii_lowercase,10)))
 
 def read_record(assem_id):
 	with get_cursor() as cur:
 		cur.execute("select gb_record from assemblies where id = %s;",(assem_id,))
-		for row in cur:
-			return row
+		for salt in cur:
+			return SeqIO.parse(os.path.join(gb_location,salt[0]),'genbank')
 		raise IOError("assembly %s has no gb_record"%assem_id)
+
 
 def make_genome(genomename):
 	with get_cursor() as curse:
@@ -78,17 +81,44 @@ def get_genome(genomename):
 	with get_cursor() as curse:
 		query = "select id from genomes where name = %s;"
 		curse.execute(query,(genomename,))
-		return curse.fetchone()
+		result = curse.fetchall()
+		for q in result:
+			return q[0]
+		return None
+
+def genome_test():
+	with get_cursor() as cursorone:
+		with get_cursor() as cursortwo:
+			assert( id(cursorone) is not id(cursortwo))
+
+	testid = make_genome("thisisnotarealname")
+	assert(testid)
+	with get_cursor() as cur:
+		cur.execute("delete from genomes where id = %s;",(testid,))
+	testid = make_genome("thisisnotarealname")
+	retrievedid = get_genome("thisisnotarealname")
+	assert(testid==retrievedid)
+	with get_cursor() as cur:
+		cur.execute("delete from genomes where id = %s",(testid,))
+		#so that shouldn't commit until it falls otu of scope, right?
+		assert( get_genome("thisisnotarealname"))
+	with get_cursor() as cursorone:
+		cursorone.execute("insert into genomes (name,id) values (%s,%s);",("thisisnotarealname",42))
+		with get_cursor() as cursortwo:
+			assert(not get_genome("thisisnotarealname"))
 
 
 
-def make_assembly(record,genome_id,reads=None,assembled=None):
+
+
+
+def make_assembly(record,genome_id,reads=None,assembled=None,accession=None):
 	with get_cursor() as curse:
 		query = "select id from genomes where id=%s;"
 		curse.execute(query,(genome_id,))
 		if not curse.fetchall():
 			raise ValueError("Tried to make an assembly %s but no matching genome was given")
-		gb_location = db.save_record(record)
+		gb_location = save_record(record)
 		query = "insert into assemblies (gb_record,genome_id) values (%s,%s);"
 		curse.execute(query,(gb_location,genome_id))
 		newassemid = curse.lastrowid
@@ -98,13 +128,45 @@ def make_assembly(record,genome_id,reads=None,assembled=None):
 		if assembled:
 			query = "update assemblies set assembled = %s where id = %s;"
 			curse.execute(query,(assembled,newassemid))
+		if accession:
+			query = "update assemblies set accession = %s where id = %s"
+			curse.execute(query,(accession,newassemid))
+		return curse.lastrowid
 
+def make_assembly_test():
+	try:
+		records = SeqIO.parse('/home/kemball/actinobacteria_class/genbank/120971.gb','genbank')
+		records= list(records)
+		gid = make_genome('test')
+		newid = make_assembly(records,gid)
+		with get_cursor() as curse:
+			curse.execute("select gb_record from assemblies where id = %s",(newid,))
+			salt = curse.fetchone()[0]
+			assert(os.path.exists(os.path.join(gb_location,salt)))
+			curse.execute("select genomes.id,genomes.name from genomes\
+											 join assemblies on \
+											 assemblies.genome_id=genomes.id\
+											  where assemblies.id=%s",(newid,))
+			fetched_id,fetched_name = curse.fetchone()
+			assert(fetched_id==gid)
+			assert(fetched_name=='test')
+			roundaboutrecord = list(read_record(newid))
+			assert(len(roundaboutrecord)==len(records))
+			assert(roundaboutrecord[0].id == records[0].id)
+			os.remove(os.path.join(gb_location,salt))
+
+	finally:
+		with get_cursor() as curse:
+			curse.execute("delete from assemblies where id = %s",(newid,))
+			curse.execute("delete from genomes where id=%s;",(gid,))	
 
 
 
 
 if __name__=="__main__":
-	pass
+	genome_test()
+
+	make_assembly_test()
 	#tests? who knows
 
 

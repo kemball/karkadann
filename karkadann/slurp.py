@@ -19,6 +19,4 @@ def slurp_fasta(fastafilename):
 
 
 if __name__=="__main__":
-	genome_id = db.make_genome('test')
-	print db.get_genome("squiffle")
-	print db.get_genome("test")
+	slurp_genbank("test.gb")
