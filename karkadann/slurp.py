@@ -2,19 +2,23 @@
 
 
 from database import get_cursor as gc 
+from database import data_location as dataloc
+import database as db
 
 from Bio import SeqIO
 import os
-from database import data_location as dataloc
+
+def slurp_genbank(gbfilename):
+	pass
+
+def slurp_fasta(fastafilename):
+	pass
 
 
-def import_genome(genomename):
-	with gc() as curse:
-		query = r"insert into genomes (name) values (%s);"
-		print query
-		print query % genomename
-		curse.execute(query,(genomename,))
-		curse.connection.commit()
+
+
 
 if __name__=="__main__":
-	import_genome('test')
+	genome_id = db.make_genome('test')
+	print db.get_genome("squiffle")
+	print db.get_genome("test")
