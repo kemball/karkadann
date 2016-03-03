@@ -32,7 +32,7 @@ CREATE TABLE `assemblies` (
   PRIMARY KEY (`id`),
   KEY `genome_id` (`genome_id`),
   CONSTRAINT `assemblies_ibfk_1` FOREIGN KEY (`genome_id`) REFERENCES `genomes` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -55,6 +55,7 @@ CREATE TABLE `contigs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `sequence` longtext,
   `assembly_id` int(11) NOT NULL,
+  `accession` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `assembly_id` (`assembly_id`),
   CONSTRAINT `contigs_ibfk_1` FOREIGN KEY (`assembly_id`) REFERENCES `assemblies` (`id`)
@@ -87,6 +88,7 @@ CREATE TABLE `genes` (
   `accession` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `contig` (`contig`),
+  CONSTRAINT `genes_ibfk_2` FOREIGN KEY (`contig`) REFERENCES `contigs` (`id`),
   CONSTRAINT `genes_ibfk_1` FOREIGN KEY (`contig`) REFERENCES `contigs` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -113,7 +115,7 @@ CREATE TABLE `genomes` (
   `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,6 +125,30 @@ CREATE TABLE `genomes` (
 LOCK TABLES `genomes` WRITE;
 /*!40000 ALTER TABLE `genomes` DISABLE KEYS */;
 /*!40000 ALTER TABLE `genomes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `genus_species`
+--
+
+DROP TABLE IF EXISTS `genus_species`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `genus_species` (
+  `genome_id` int(11) DEFAULT NULL,
+  `binomial` text,
+  KEY `genome_id` (`genome_id`),
+  CONSTRAINT `genus_species_ibfk_1` FOREIGN KEY (`genome_id`) REFERENCES `genomes` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `genus_species`
+--
+
+LOCK TABLES `genus_species` WRITE;
+/*!40000 ALTER TABLE `genus_species` DISABLE KEYS */;
+/*!40000 ALTER TABLE `genus_species` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -159,4 +185,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-03-02 11:30:38
+-- Dump completed on 2016-03-03 11:56:37
