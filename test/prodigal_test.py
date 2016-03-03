@@ -1,4 +1,5 @@
 from karkadann.prodigal import *
+from karkadann.database import data_location
 
 def overlap_test():
 	from Bio.SeqFeature import FeatureLocation
@@ -24,4 +25,13 @@ def overlap_test():
 	test_overlap(definitely_outside,reference_feature,False)
 
 if __name__=="__main__":
+	#I should really convert this to use the .cfg file
+	# why else did I write it?
 	overlap_test()
+	testgb = os.path.join(data_location,"test/testassem.gb")
+	testrec=SeqIO.parse(testgb,'genbank')
+	betteranno = annotate(testrec)
+	SeqIO.write(betteranno,'test.gb','genbank')
+	testrec=SeqIO.parse(testgb,'genbank')
+	preserved_anno = annotate(testrec,preserve_anno=True)
+	SeqIO.write(preserved_anno,'test2.gb','genbank')

@@ -10,6 +10,6 @@ from Bio import SearchIO
 def call_hmmer(hmmfile,inputproteins):
 	sp.call(['hmmsearch',hmmfile,inputproteins])
 	SearchIO.parse(hmmfile,format=hmmer3-text)
-	pass
+	
 
 
