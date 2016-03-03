@@ -46,7 +46,7 @@ def get_cursor():
 		yield curse
 		conn.commit()
 		#if something bad happened don't commit
-		# I haven't actually tested whether that works. :(
+		# I checked, it works.
 	finally:
 		curse.close()
 		conn.close()
@@ -86,31 +86,6 @@ def get_genome(genomename):
 			return q[0]
 		return None
 
-def genome_test():
-	with get_cursor() as cursorone:
-		with get_cursor() as cursortwo:
-			assert( id(cursorone) is not id(cursortwo))
-
-	testid = make_genome("thisisnotarealname")
-	assert(testid)
-	with get_cursor() as cur:
-		cur.execute("delete from genomes where id = %s;",(testid,))
-	testid = make_genome("thisisnotarealname")
-	retrievedid = get_genome("thisisnotarealname")
-	assert(testid==retrievedid)
-	with get_cursor() as cur:
-		cur.execute("delete from genomes where id = %s",(testid,))
-		#so that shouldn't commit until it falls otu of scope, right?
-		assert( get_genome("thisisnotarealname"))
-	with get_cursor() as cursorone:
-		cursorone.execute("insert into genomes (name,id) values (%s,%s);",("thisisnotarealname",42))
-		with get_cursor() as cursortwo:
-			assert(not get_genome("thisisnotarealname"))
-
-
-
-
-
 
 def make_assembly(record,genome_id,reads=None,assembled=None,accession=None):
 	with get_cursor() as curse:
@@ -133,32 +108,28 @@ def make_assembly(record,genome_id,reads=None,assembled=None,accession=None):
 			curse.execute(query,(accession,newassemid))
 		return curse.lastrowid
 
-def make_assembly_test():
-	try:
-		records = SeqIO.parse('/home/kemball/actinobacteria_class/genbank/120971.gb','genbank')
-		records= list(records)
-		gid = make_genome('test')
-		newid = make_assembly(records,gid)
-		with get_cursor() as curse:
-			curse.execute("select gb_record from assemblies where id = %s",(newid,))
-			salt = curse.fetchone()[0]
-			assert(os.path.exists(os.path.join(gb_location,salt)))
-			curse.execute("select genomes.id,genomes.name from genomes\
-											 join assemblies on \
-											 assemblies.genome_id=genomes.id\
-											  where assemblies.id=%s",(newid,))
-			fetched_id,fetched_name = curse.fetchone()
-			assert(fetched_id==gid)
-			assert(fetched_name=='test')
-			roundaboutrecord = list(read_record(newid))
-			assert(len(roundaboutrecord)==len(records))
-			assert(roundaboutrecord[0].id == records[0].id)
-			os.remove(os.path.join(gb_location,salt))
 
-	finally:
-		with get_cursor() as curse:
-			curse.execute("delete from assemblies where id = %s",(newid,))
-			curse.execute("delete from genomes where id=%s;",(gid,))	
+
+def save_contig(assembly_id,sequence,accession=None):
+	with get_cursor() as cur:
+		if accession:
+			cur.execute("insert into contigs \
+						(assembly_id,sequence,accession)\
+						 values (%s,%s,%s);",
+						 (assembly_id,sequence,accession))
+			return cur.lastrowid
+		else:
+			cur.execute("insert into contigs \
+				(assembly_id,sequence) values (%s,%s",(assembly_id,sequence))
+			return cur.lastrowid
+
+def save_contig_from_record(assembly_id,record):
+	#if record.id isn't the accession number some stuff is going to get a little bit broken.
+	save_contig(assembly_id,str(record.seq),record.id)
+
+def save_binomial(genome_id,name):
+	with get_cursor() as cur:
+		cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s)",(genome_id,name))
 
 
 
@@ -167,6 +138,5 @@ if __name__=="__main__":
 	genome_test()
 
 	make_assembly_test()
-	#tests? who knows
 
 

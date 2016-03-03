@@ -8,6 +8,30 @@ import database as db
 from Bio import SeqIO
 import os
 
+def annotate_save(gbfilename,genome_name):
+	from prodigal import annotate
+	records = list(SeqIO.parse(gbfilename,'genbank'))
+	genid = db.make_genome(genome_name)
+	organisms = set([])
+	for r in records:
+		try:
+			organisms |= set([r.annotations['organism']])
+		except KeyError:
+			pass
+	assert(len(organisms)==1)
+	db.save_binomial(genid,list(organisms)[0])
+	newrec = annotate(records,preserve_anno=True)
+	assid = db.make_assembly(newrec,genid)
+	for contig in newrec:
+		db.save_contig_from_record(assid,contig)
+
+
+
+
+
+
+
+
 def slurp_genbank(gbfilename):
 	pass
 
@@ -20,3 +44,4 @@ def slurp_fasta(fastafilename):
 
 if __name__=="__main__":
 	slurp_genbank("test.gb")
+	annotate_save("/home/kemball/bunicorn/data/test/testassem.gb","test")
