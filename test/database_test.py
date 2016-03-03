@@ -27,31 +27,31 @@ def record_test():
 	pass
 
 def make_assembly_test():
-try:
-	records = SeqIO.parse('/home/kemball/actinobacteria_class/genbank/120971.gb','genbank')
-	records= list(records)
-	gid = make_genome('test')
-	newid = make_assembly(records,gid)
-	with get_cursor() as curse:
-		curse.execute("select gb_record from assemblies where id = %s",(newid,))
-		salt = curse.fetchone()[0]
-		assert(os.path.exists(os.path.join(gb_location,salt)))
-		curse.execute("select genomes.id,genomes.name from genomes\
-										 join assemblies on \
-										 assemblies.genome_id=genomes.id\
-										  where assemblies.id=%s",(newid,))
-		fetched_id,fetched_name = curse.fetchone()
-		assert(fetched_id==gid)
-		assert(fetched_name=='test')
-		roundaboutrecord = list(read_record(newid))
-		assert(len(roundaboutrecord)==len(records))
-		assert(roundaboutrecord[0].id == records[0].id)
-		os.remove(os.path.join(gb_location,salt))
+	try:
+		records = SeqIO.parse('/home/kemball/actinobacteria_class/genbank/120971.gb','genbank')
+		records= list(records)
+		gid = make_genome('test')
+		newid = make_assembly(records,gid)
+		with get_cursor() as curse:
+			curse.execute("select gb_record from assemblies where id = %s",(newid,))
+			salt = curse.fetchone()[0]
+			assert(os.path.exists(os.path.join(gb_location,salt)))
+			curse.execute("select genomes.id,genomes.name from genomes\
+											 join assemblies on \
+											 assemblies.genome_id=genomes.id\
+											  where assemblies.id=%s",(newid,))
+			fetched_id,fetched_name = curse.fetchone()
+			assert(fetched_id==gid)
+			assert(fetched_name=='test')
+			roundaboutrecord = list(read_record(newid))
+			assert(len(roundaboutrecord)==len(records))
+			assert(roundaboutrecord[0].id == records[0].id)
+			os.remove(os.path.join(gb_location,salt))
 
-finally:
-	with get_cursor() as curse:
-		curse.execute("delete from assemblies where id = %s",(newid,))
-		curse.execute("delete from genomes where id=%s;",(gid,))	
+	finally:
+		with get_cursor() as curse:
+			curse.execute("delete from assemblies where id = %s",(newid,))
+			curse.execute("delete from genomes where id=%s;",(gid,))	
 
 
 if __name__=="__main__":
