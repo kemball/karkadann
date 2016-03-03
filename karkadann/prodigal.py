@@ -37,14 +37,53 @@ def parse_prodigal(prodigal_record):
 			strand = int(strand)
 			location = SeqFeature.FeatureLocation(start,end,strand)
 			sequence = str(rec.seq)
-			qualifiers = {'translation':sequence,'protein_id':prod_id}
+			qualifiers = {'translation':sequence,'prodigal_id':prod_id}
 			# multiple features go on the same record. This returns the name to keep track of what goes where.
 			feature = SeqFeature.SeqFeature(location=location,type="CDS",strand=strand,id=id_number,qualifiers=qualifiers)
 			yield name,feature
 
+def overlap(one,two):
+	#this is designed to operate on SeqFeature locations
+	#sharing a single base doesn't count. I DECREE
+	if one.start == two.end or two.start == one.end:
+		return False
+	elif one.start in two or one.end in two:
+		return True
+	elif two.start in one or two.end in one:
+		return True
+	else:
+		return False
 
-def annotate(gbfile):
-	record = list(SeqIO.parse(gbfile,'gb'))
+def overlap_test():
+	from Bio.SeqFeature import FeatureLocation
+
+	def test_overlap(one,two,result):
+		assert(overlap(one,two)==overlap(two,one))
+		assert(overlap(one,two)==result)
+
+	reference_feature= FeatureLocation(100,200,strand=+1)
+	inside_feature = FeatureLocation(150,175,strand=+1)
+	test_overlap(reference_feature,inside_feature,True)
+
+	left_feature = FeatureLocation(75,150,strand=+1)
+	test_overlap(left_feature,reference_feature,True)
+
+	left_touchy = FeatureLocation(50,100,strand=+1)
+	test_overlap(left_touchy,reference_feature,False)
+
+	left_inside = FeatureLocation(100,125,strand=+1)
+	test_overlap(left_inside,reference_feature,True)
+
+	definitely_outside = FeatureLocation(500,1000,strand=-1)
+	test_overlap(definitely_outside,reference_feature,False)
+
+
+
+
+
+
+def annotate(record,preserve_anno = False):
+	record = list(record)
 	#could parallelize but won't help much
 	with ntf(prefix='/dev/shm/',delete=True,suffix=".fna") as fastafile:
 		# prodigal can handle the genbank files
@@ -57,13 +96,32 @@ def annotate(gbfile):
 	features_of_contigs = defaultdict(list)
 	for name,feature in gene_calls:
 		features_of_contigs[name].append(feature)
-	for contigrec in record:
-		if contigrec.features and contigrec.features[0].type=="source":
-			sf = contigrec.features[0]
-			#the id here is the accession number
-			contigrec.features = [sf] + features_of_contigs[contigrec.id]
-		else:
-			contigrec.features = features_of_contigs[contigrec.id]
+	if not preserve_anno:
+		#these are entirely independent, and could be threaded. 
+		#But what's the point? parallelizing calls to annotate would be faster and require
+		# less effort
+		for contigrec in record:
+			if contigrec.features and contigrec.features[0].type=="source":
+				sf = contigrec.features[0]
+				#the id here is the accession number
+				contigrec.features = [sf] + features_of_contigs[contigrec.id]
+			else:
+				contigrec.features = features_of_contigs[contigrec.id]
+	else:
+		for contigrec in record:
+			newfeats = features_of_contigs[contigrec.id]
+			oldfeats = contigrec.features
+			keepfeats = []
+			for n in newfeats:
+				for o in oldfeats:
+					#source types and assembly gaps don't count
+					if o.type in ["gene","CDS"] and overlap(n.location,o.location):
+						break
+				else:
+					#we should keep this new feature, it doesn't overlap
+					keepfeats.append(n)
+			contigrec.features.extend(keepfeats)
+
 	return record
 
 
@@ -72,5 +130,11 @@ def annotate(gbfile):
 
 
 if __name__=="__main__":
-	betteranno = annotate('/home/kemball/actinobacteria_class/genbank/120971.gb')
+	overlap_test()
+	#this is nto a real test case but it seems to work so...
+	testrec=SeqIO.parse('/home/kemball/bunicorn/data/test/testassem.gb','genbank')
+	betteranno = annotate(testrec)
 	SeqIO.write(betteranno,'test.gb','genbank')
+	testrec=SeqIO.parse('/home/kemball/bunicorn/data/test/testassem.gb','genbank')
+	preserved_anno = annotate(testrec,preserve_anno=True)
+	SeqIO.write(preserved_anno,'test2.gb','genbank')
