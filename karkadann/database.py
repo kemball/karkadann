@@ -131,6 +131,9 @@ def save_binomial(genome_id,name):
 	with get_cursor() as cur:
 		cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s)",(genome_id,name))
 
+def save_genes(contig_id,features):
+	pass
+
 
 
 
