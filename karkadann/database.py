@@ -125,14 +125,50 @@ def save_contig(assembly_id,sequence,accession=None):
 
 def save_contig_from_record(assembly_id,record):
 	#if record.id isn't the accession number some stuff is going to get a little bit broken.
-	save_contig(assembly_id,str(record.seq),record.id)
+	contid = save_contig(assembly_id,str(record.seq),record.id)
+
+	save_genes(contid,record.features)
+
 
 def save_binomial(genome_id,name):
 	with get_cursor() as cur:
 		cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s)",(genome_id,name))
 
 def save_genes(contig_id,features):
-	pass
+	# only prodigal features show up in the database. Nothing with accession numbers. :?
+	print " ".join([x.type for x in features])
+	for f in features:
+		if f.type is not "CDS":
+			continue
+
+		if "protein_id" in f.qualifiers.keys():
+			accession = f.qualifiers['protein_id']
+		else:
+			accession = None
+
+		if "translation" in f.qualifiers.keys():
+			translation = f.qualifiers["translation"]
+		else:
+			translation = None
+		start = f.location.start
+		end = f.location.end
+		strand = str(f.location.strand) #str required otherwise the enum in SQL gets confused.
+		save_gene(contig_id,translation,start,end,strand,accession)
+
+
+
+def save_gene(contig_id,translation,start,end,strand,accession=None):
+	with get_cursor() as cur:
+		if accession:
+			print accession
+			query = "insert into genes (contig,translation,start,end,strand,accession)\
+					values (%s,%s,%s,%s,%s,%s);"
+			cur.execute(query,(contig_id,translation,start,end,strand,accession))
+		else:
+			query = "insert into genes (contig,translation,start,end,strand)\
+					values (%s,%s,%s,%s,%s);"
+			cur.execute(query,(contig_id,translation,start,end,strand))
+		return cur.lastrowid
 
 
 

@@ -6,6 +6,10 @@ import re
 from tempfile import NamedTemporaryFile as ntf
 import os
 from collections import defaultdict
+from copy import deepcopy
+
+from database import config
+merge_thresh = config.get('prodigal','merge_thresh')
 
 #requires prodigal, but not sure how to check for that.
 #i'll figure it out later
@@ -54,14 +58,61 @@ def overlap(one,two):
 	else:
 		return False
 
+def floverlap(one,two):
+	if one.start > two.start:
+		#ensures 'one' is leftmost
+		return floverlap(two,one)
+	if one.end <= two.start:
+		#       ____
+		#  ----
+		return 0.0 
+	if one.end > two.end:
+		#    _____
+		#   --------
+		return float(len(two))/len(one)
+	if two.end >= one.end:
+		#    _____
+		#  -----
+		return float(one.end-two.start)/(max(len(one),len(two)))
+	raise ValueError
 
 
+def merge_features(records,gene_calls,preserve_anno=True):
+	features_of_contigs = defaultdict(list)
+	for name,feature in gene_calls:
+		features_of_contigs[name].append(feature)
 
+	#preserve anno is busted. :/
+	if not preserve_anno:
+		for contigrec in records:
+			if contigrec.features and contigrec.features[0].type=="source":
+				sf = contigrec.features[0]
+				#the id here is the accession number
+				contigrec.features = [sf] + features_of_contigs[contigrec.id]
+			else:
+				contigrec.features = features_of_contigs[contigrec.id]
+	else:
+		for contigrec in records:
+			newfeats = features_of_contigs[contigrec.id]
+			oldfeats = contigrec.features[:]
+			for n in newfeats:
+				for o in oldfeats:
+					#source types and assembly gaps don't count
+					if o.type =="CDS" and floverlap(n.location,o.location)>merge_thresh:
+						print "skipping new protein %s" % protein.id
+						break
+				else:
+					#we should keep this new feature, it doesn't overlap
+					contigrec.features.append(n)
+			contigrec.features.sort(key=lambda x: x.location.start)
+
+	return records
 
 
 
 def annotate(record,preserve_anno = False):
-	record = list(record)
+	record = deepcopy(list(record))
+	#getting problems with annotated lists squashing each other's features
 	#could parallelize but won't help much
 	with ntf(prefix='/dev/shm/',delete=True,suffix=".fna") as fastafile:
 		# prodigal can handle the genbank files
@@ -70,37 +121,9 @@ def annotate(record,preserve_anno = False):
 		# to avoid excessive disk sadness, /dev/shm files are kept on RAM
 		SeqIO.write(record,fastafile.name,'fasta')
 		gene_calls = parse_prodigal(call_prodigal(fastafile.name))
-
-	features_of_contigs = defaultdict(list)
-	for name,feature in gene_calls:
-		features_of_contigs[name].append(feature)
-	if not preserve_anno:
-		#these are entirely independent, and could be threaded. 
-		#But what's the point? parallelizing calls to annotate would be faster and require
-		# less effort
-		for contigrec in record:
-			if contigrec.features and contigrec.features[0].type=="source":
-				sf = contigrec.features[0]
-				#the id here is the accession number
-				contigrec.features = [sf] + features_of_contigs[contigrec.id]
-			else:
-				contigrec.features = features_of_contigs[contigrec.id]
-	else:
-		for contigrec in record:
-			newfeats = features_of_contigs[contigrec.id]
-			oldfeats = contigrec.features
-			keepfeats = []
-			for n in newfeats:
-				for o in oldfeats:
-					#source types and assembly gaps don't count
-					if o.type in ["gene","CDS"] and overlap(n.location,o.location):
-						break
-				else:
-					#we should keep this new feature, it doesn't overlap
-					keepfeats.append(n)
-			contigrec.features.extend(keepfeats)
-
-	return record
+	records = merge_features(record,gene_calls,preserve_anno)
+	return records
+	
 
 
 
@@ -108,7 +131,6 @@ def annotate(record,preserve_anno = False):
 
 
 if __name__=="__main__":
-	overlap_test()
 	#this is nto a real test case but it seems to work so...
 	testrec=SeqIO.parse('/home/kemball/bunicorn/data/test/testassem.gb','genbank')
 	betteranno = annotate(testrec)
