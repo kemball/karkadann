@@ -43,4 +43,4 @@ def slurp_fasta(fastafilename):
 
 
 if __name__=="__main__":
-	annotate_save("/home/kemball/bunicorn/data/test/testassem.gb","test")
+	pass
