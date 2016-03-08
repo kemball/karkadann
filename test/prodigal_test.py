@@ -30,7 +30,7 @@ class TestOverlap(ut.TestCase):
 		overlap_exercise(definitely_outside,reference_feature,False)
 
 
-
+#best bikeshed EU. 
 class FloatingOverlapTest(ut.TestCase):
 
 	def test_left(self):
@@ -153,15 +153,11 @@ class TestAnnotate(ut.TestCase):
 		testprots = filter(lambda iscds: iscds.type == "CDS",testcontig.features)
 		preserveprots = filter(lambda iscds: iscds.type =="CDS",preservecontig.features)
 		spoiledprots = filter(lambda iscds: iscds.type =="CDS",spoiledcontig.features)
+		# preservation of features should only add features
 		self.assertGreaterEqual(len(preserveprots),len(testprots))
+		# there should be more preserved features than prodigal features
 		self.assertGreaterEqual(len(preserveprots),len(spoiledprots))
 		if testcontig.id == "NZ_KK070022.1":
-			print "testprots"
-			print testprots
-			print "spoiledprots"
-			print spoiledprots
-			print "preserveprots"
-			print preserveprots
 			self.assertEqual(len(spoiledprots),3)
 			self.assertEqual(len(preserveprots),3)
 			self.assertEqual(len(testprots),2)

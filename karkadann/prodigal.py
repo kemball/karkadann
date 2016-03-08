@@ -9,7 +9,7 @@ from collections import defaultdict
 from copy import deepcopy
 
 from database import config
-merge_thresh = config.get('prodigal','merge_thresh')
+merge_thresh = float(config.get('prodigal','merge_thresh'))
 
 #requires prodigal, but not sure how to check for that.
 #i'll figure it out later
@@ -22,7 +22,7 @@ def call_prodigal(fastafile):
 	Everything is done in temporary files kept on virtual filesystem."""
 	#check if file exists blah blah
 	with ntf(prefix='/dev/shm/',delete=True,suffix='.prot') as protfile,ntf(prefix='/dev/shm/',delete=True,suffix='.out') as prod:
-		sp.call(['prodigal','-i',fastafile,'-a',protfile.name,'-o',prod.name])
+		sp.call(['prodigal','-i',fastafile,'-a',protfile.name,'-o',prod.name,'-q'])
 		#you can't close over temporary files, so the .parse generator can't generate once this returns
 		#hence list. sucks to be you memory
 		return list(SeqIO.parse(protfile.name,'fasta'))
@@ -99,7 +99,6 @@ def merge_features(records,gene_calls,preserve_anno=True):
 				for o in oldfeats:
 					#source types and assembly gaps don't count
 					if o.type =="CDS" and floverlap(n.location,o.location)>merge_thresh:
-						print "skipping new protein %s" % protein.id
 						break
 				else:
 					#we should keep this new feature, it doesn't overlap

@@ -3,6 +3,16 @@ The Unicorn Progect 2
 
 A complete rewrite of the GCF software and pipeline.
 
+##Install
+
+`python setup.py install` should install karkadann to your current python environment. I recommend virtenvs and pip for dependencies and so on, but MySQLdb is legendarily difficult to install. It's full of pitfalls, so you're always going to have some work to do unless you have it already. Anyway.
+
+`python setup.py test` will run automatic tests of all the code that exists so far. Some of it relies on testassem.gb being in a particular place but that's being phased out.
+
+##Usage
+
+I've documented all the function signatures here but the API is still half-baked and subject to change. At some point there'll be a set of functions that are available for export and guaranteed not to change, but that point is not today.
+
 ###Prodigal.py
 
 Annotate takes a SeqIO record iterator and runs it through prodigal to reannotate all the genes. This is a bit rude considering genbank files mostly contain gene annotations already, but they can be patchy or missing or just inconsistent.
@@ -50,9 +60,21 @@ Creates an assembly linked to a genome. Automagically saves the record to the fi
 
 Saves contigs into the database with optional accession. Sequence is a string. `str(record.seq)` is what you want.
 
+#####`save_contig_from_record(assembly_id,record)
+
+Exactly what it sounds like. A naked wrapper around save_contig. record.id should be the accession number if it exists, please.
+
 #####`save_binomial(genome_id,genus_species)`
 
 Saves a binomial name into the database for that genome.
+
+#####`save_genes(contig_id,features)`
+
+Saves a bunch of genes to the specified contig, using features with locations and so on.
+
+#####`save_gene(contig_id,translation,start,end,strand,accession=None)
+
+Saves a single gene to the contig.
 
 ##hmm.py
 

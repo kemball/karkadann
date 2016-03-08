@@ -135,8 +135,6 @@ def save_binomial(genome_id,name):
 		cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s)",(genome_id,name))
 
 def save_genes(contig_id,features):
-	# only prodigal features show up in the database. Nothing with accession numbers. :?
-	print " ".join([x.type for x in features])
 	for f in features:
 		if f.type is not "CDS":
 			continue
