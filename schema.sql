@@ -33,7 +33,7 @@ CREATE TABLE `assemblies` (
   UNIQUE KEY `unique_file` (`gb_record`),
   KEY `genome_id` (`genome_id`),
   CONSTRAINT `assemblies_ibfk_1` FOREIGN KEY (`genome_id`) REFERENCES `genomes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -60,7 +60,7 @@ CREATE TABLE `contigs` (
   PRIMARY KEY (`id`),
   KEY `assembly_id` (`assembly_id`),
   CONSTRAINT `contigs_ibfk_1` FOREIGN KEY (`assembly_id`) REFERENCES `assemblies` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=772 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -91,7 +91,7 @@ CREATE TABLE `genes` (
   KEY `contig` (`contig`),
   CONSTRAINT `genes_ibfk_2` FOREIGN KEY (`contig`) REFERENCES `contigs` (`id`),
   CONSTRAINT `genes_ibfk_1` FOREIGN KEY (`contig`) REFERENCES `contigs` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7955 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -116,7 +116,7 @@ CREATE TABLE `genomes` (
   `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=123 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=216 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -153,6 +153,29 @@ LOCK TABLES `genus_species` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `hmm_storage`
+--
+
+DROP TABLE IF EXISTS `hmm_storage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hmm_storage` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `filename` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hmm_storage`
+--
+
+LOCK TABLES `hmm_storage` WRITE;
+/*!40000 ALTER TABLE `hmm_storage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `hmm_storage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `names`
 --
 
@@ -186,4 +209,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-03-03 13:09:15
+-- Dump completed on 2016-03-08 14:27:14

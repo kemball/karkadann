@@ -43,7 +43,11 @@ def parse_prodigal(prodigal_record):
 			sequence = str(rec.seq)
 			qualifiers = {'translation':sequence,'prodigal_id':prod_id}
 			# multiple features go on the same record. This returns the name to keep track of what goes where.
-			feature = SeqFeature.SeqFeature(location=location,type="CDS",strand=strand,id=id_number,qualifiers=qualifiers)
+			feature = SeqFeature.SeqFeature(location=location,
+											type="CDS",
+											strand=strand,
+											id=id_number,
+											qualifiers=qualifiers)
 			yield name,feature
 
 def overlap(one,two):

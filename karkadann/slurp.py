@@ -24,6 +24,7 @@ def annotate_save(gbfilename,genome_name):
 	assid = db.make_assembly(newrec,genid)
 	for contig in newrec:
 		db.save_contig_from_record(assid,contig)
+	return assid
 
 
 

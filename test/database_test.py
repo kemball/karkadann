@@ -2,6 +2,18 @@ from context import karkadann
 from karkadann.database import *
 import unittest as ut 
 
+class FileTest(ut.TestCase):
+	import os
+	def test_data_location(self):
+		self.assertTrue(os.access(data_location,os.R_OK))
+	def test_gb_location(self):
+		self.assertTrue(os.access(gb_location,os.R_OK))
+	def test_hmm_location(self):
+		self.assertTrue(os.access(hmm_location,os.R_OK))
+
+
+
+
 class GenomeTest(ut.TestCase):
 	def test_make_genome(self):
 		with get_cursor() as cursorone:
@@ -32,54 +44,56 @@ class GenomeTest(ut.TestCase):
 		with get_cursor() as cursor:
 			cursor.execute("delete from genomes where id=%s",(get_genome("thisisnotarealname"),))
 
-def record_test():
-	#I have no idea how to test if this works, I can't roundtrip with biopython
-	pass
 
 
+class AssemblyTest(ut.TestCase):
+	#this screams for setup and teardown methods
+	#and yet here we are
+	records = SeqIO.parse(os.path.join(data_location,'test/testassem.gb'),'genbank')
 
-def make_assembly_test():
-	#wettest code 2016
-	try:
-		records = SeqIO.parse('/home/kemball/actinobacteria_class/genbank/120971.gb','genbank')
-		records= list(records)
+	def test_make_assembly(self):
+		records = list(self.records)
 		gid = make_genome('test')
-	finally:
-		with get_cursor() as curse:
-			curse.execute("delete from genomes where id=%s;",(gid,))	
-	try:
-		gid = make_genome('test')
-		newid = make_assembly(records,gid)
+		aid = make_assembly(records,gid)
+		with get_cursor() as cur:
+			cur.execute('delete from assemblies where id=%s;',(aid,))
+			cur.execute('delete from genomes where id =%s;',(gid,))
 
-	finally:
-		with get_cursor() as curse:
-			curse.execute("delete from assemblies where id = %s",(newid,))
-			curse.execute("delete from genomes where id=%s;",(gid,))	
+	def test_gb_record(self):
+		records = list(self.records)
+		gid = make_genome("foobarbazqux")
+		newassem = make_assembly(records,gid)
+		with get_cursor() as cur:
+			cur.execute("select gb_record from assemblies where id = %s;",(newassem,))
+			name = cur.fetchone()[0]
+			self.assertTrue(os.path.exists(os.path.join(gb_location,name)))
+		with get_cursor() as cur:
+			cur.execute("select genomes.id,genomes.name from genomes\
+														join assemblies \
+															on assemblies.genome_id=genomes.id\
+														where assemblies.id=%s;",(newassem,))
+			fid,fname = cur.fetchone()
+			self.assertEqual(gid,fid)
+			self.assertEqual("foobarbazqux",fname)
+		roundaboutrecord = list(read_record(newassem))
+		assert(len(roundaboutrecord)==len(records))
+		assert(roundaboutrecord[0].id == records[0].id)
+		os.remove(os.path.join(gb_location,name))
+		with get_cursor() as cur:
+			cur.execute('delete from assemblies where id=%s;',(assemid,))
+			cur.execute('delete from genomes where id =%s;',(gid,))
 
-	try:
-		gid = make_genome('test')
-		newid = make_assembly(records,gid)
-		with get_cursor() as curse:
-			curse.execute("select gb_record from assemblies where id = %s",(newid,))
-			salt = curse.fetchone()[0]
-			assert(os.path.exists(os.path.join(gb_location,salt)))
-			curse.execute("select genomes.id,genomes.name from genomes\
-											 join assemblies on \
-											 assemblies.genome_id=genomes.id\
-											  where assemblies.id=%s",(newid,))
-			fetched_id,fetched_name = curse.fetchone()
-			assert(fetched_id==gid)
-			assert(fetched_name=='test')
-			roundaboutrecord = list(read_record(newid))
-			assert(len(roundaboutrecord)==len(records))
-			assert(roundaboutrecord[0].id == records[0].id)
-			os.remove(os.path.join(gb_location,salt))
 
-	finally:
-		with get_cursor() as curse:
-			curse.execute("delete from assemblies where id = %s",(newid,))
-			curse.execute("delete from genomes where id=%s;",(gid,))	
-oldtest = ut.FunctionTestCase(make_assembly_test)
+
+
+
+class HmmTest(ut.TestCase):
+	def test_import(self):
+		pass
+
+
+
+
 
 
 if __name__=="__main__":

@@ -14,15 +14,21 @@ password = config.get('database','password')
 dbname   = config.get('database','dbname')
 
 data_location = config.get('data','data_location')
-gb_location = os.path.join(data_location,'genbank')
 
 if not os.access(data_location,os.R_OK):
 	#panic?
 	os.mkdir(data_location)
 
+gb_location = os.path.join(data_location,'genbank')
+
 if not os.access(gb_location,os.R_OK):
 	#genbank directory not found
 	os.mkdir(gb_location)
+
+hmm_location = os.path.join(data_location,'hmm')
+
+if not os.access(hmm_location,os.R_OK):
+	os.mkdir(hmm_location)
 
 
 from contextlib import contextmanager
@@ -126,7 +132,6 @@ def save_contig(assembly_id,sequence,accession=None):
 def save_contig_from_record(assembly_id,record):
 	#if record.id isn't the accession number some stuff is going to get a little bit broken.
 	contid = save_contig(assembly_id,str(record.seq),record.id)
-
 	save_genes(contid,record.features)
 
 
@@ -167,6 +172,16 @@ def save_gene(contig_id,translation,start,end,strand,accession=None):
 					values (%s,%s,%s,%s,%s);"
 			cur.execute(query,(contig_id,translation,start,end,strand))
 		return cur.lastrowid
+
+def import_hmm(hmmfile):
+	shortname = os.path.basename(hmmfile)
+	with get_cursor() as cur:
+		query = "insert into hmm_storage filename value %s;"
+		cur.execute(query,(shortname,))
+	from shutils import copyfile
+	copyfile(hmmfile,os.path.join(hmm_location,shortname))
+	return shortname
+
 
 
 

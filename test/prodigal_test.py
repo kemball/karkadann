@@ -146,21 +146,25 @@ class TestAnnotate(ut.TestCase):
 		#or change their order or sequence
 		self.assertEqual(len(preserved_contig.seq),len(raw_contig.seq))
 
+
 	def test_merge(self):
-		testcontig = self.testrec[0]
-		preservecontig = self.preserve_testrec[0]
-		spoiledcontig = self.spoiled_testrec[0]
-		testprots = filter(lambda iscds: iscds.type == "CDS",testcontig.features)
-		preserveprots = filter(lambda iscds: iscds.type =="CDS",preservecontig.features)
-		spoiledprots = filter(lambda iscds: iscds.type =="CDS",spoiledcontig.features)
-		# preservation of features should only add features
-		self.assertGreaterEqual(len(preserveprots),len(testprots))
-		# there should be more preserved features than prodigal features
-		self.assertGreaterEqual(len(preserveprots),len(spoiledprots))
-		if testcontig.id == "NZ_KK070022.1":
-			self.assertEqual(len(spoiledprots),3)
-			self.assertEqual(len(preserveprots),3)
-			self.assertEqual(len(testprots),2)
+		for i in range(len(self.testrec)):
+
+			testcontig = self.testrec[i]
+			preservecontig = self.preserve_testrec[i]
+			spoiledcontig = self.spoiled_testrec[i]
+			testprots = filter(lambda iscds: iscds.type == "CDS",testcontig.features)
+			preserveprots = filter(lambda iscds: iscds.type =="CDS",preservecontig.features)
+			spoiledprots = filter(lambda iscds: iscds.type =="CDS",spoiledcontig.features)
+			# preservation of features should only add features
+			self.assertGreaterEqual(len(preserveprots),len(testprots))
+			# there should be more preserved features than prodigal features
+			self.assertGreaterEqual(len(preserveprots),len(spoiledprots))
+			if testcontig.id == "NZ_KK070022.1":
+				self.assertEqual(len(spoiledprots),3)
+				self.assertEqual(len(preserveprots),3)
+				self.assertEqual(len(testprots),2)
+
 
 
 
@@ -176,5 +180,5 @@ if __name__=="__main__":
 	testrec=SeqIO.parse(testgb,'genbank')
 	preserved_anno = annotate(testrec,preserve_anno=True)
 	SeqIO.write(preserved_anno,'test2.gb','genbank')
-	#ut.main()
+	ut.main()
 
