@@ -93,6 +93,8 @@ def get_genome(genomename):
 		return None
 
 
+
+
 def make_assembly(record,genome_id,reads=None,assembled=None,accession=None):
 	with get_cursor() as curse:
 		query = "select id from genomes where id=%s;"
@@ -123,16 +125,29 @@ def save_contig(assembly_id,sequence,accession=None):
 						(assembly_id,sequence,accession)\
 						 values (%s,%s,%s);",
 						 (assembly_id,sequence,accession))
-			return cur.lastrowid
 		else:
 			cur.execute("insert into contigs \
-				(assembly_id,sequence) values (%s,%s",(assembly_id,sequence))
-			return cur.lastrowid
+				(assembly_id,sequence) values (%s,%s);",(assembly_id,sequence))
+		return cur.lastrowid
 
-def save_contig_from_record(assembly_id,record):
+def save_from_record(assembly_id,record):
 	#if record.id isn't the accession number some stuff is going to get a little bit broken.
 	contid = save_contig(assembly_id,str(record.seq),record.id)
 	save_genes(contid,record.features)
+	return contid
+
+def get_contigs(assemid):
+	with get_cursor() as curse:
+		curse.execute("select id from contigs where assembly_id=%s;",(assemid,))
+		return [contig_id[0] for contig_id in curse]
+
+
+def read_contig_seq(contig_id):
+	with get_cursor() as cur:
+		query = "select sequence,accession from contigs where id = %s;"
+		cur.execute(query,(contig_id,))
+		for seq,acc in cur:
+			return seq
 
 
 def save_binomial(genome_id,name):
@@ -140,17 +155,16 @@ def save_binomial(genome_id,name):
 		cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s)",(genome_id,name))
 
 def save_genes(contig_id,features):
-	for f in features:
-		if f.type is not "CDS":
-			continue
+	protlist = [f for f in features if f.type=="CDS"]
+	for f in protlist:
 
 		if "protein_id" in f.qualifiers.keys():
-			accession = f.qualifiers['protein_id']
+			accession = f.qualifiers['protein_id'][0]
 		else:
 			accession = None
 
 		if "translation" in f.qualifiers.keys():
-			translation = f.qualifiers["translation"]
+			translation = f.qualifiers["translation"][0]
 		else:
 			translation = None
 		start = f.location.start
@@ -163,7 +177,6 @@ def save_genes(contig_id,features):
 def save_gene(contig_id,translation,start,end,strand,accession=None):
 	with get_cursor() as cur:
 		if accession:
-			print accession
 			query = "insert into genes (contig,translation,start,end,strand,accession)\
 					values (%s,%s,%s,%s,%s,%s);"
 			cur.execute(query,(contig_id,translation,start,end,strand,accession))
@@ -171,7 +184,9 @@ def save_gene(contig_id,translation,start,end,strand,accession=None):
 			query = "insert into genes (contig,translation,start,end,strand)\
 					values (%s,%s,%s,%s,%s);"
 			cur.execute(query,(contig_id,translation,start,end,strand))
+
 		return cur.lastrowid
+
 
 def import_hmm(hmmfile):
 	shortname = os.path.basename(hmmfile)
@@ -188,7 +203,6 @@ def import_hmm(hmmfile):
 
 if __name__=="__main__":
 	genome_test()
-
 	make_assembly_test()
 
 
