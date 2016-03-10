@@ -24,7 +24,7 @@ Returns a prodigated gbrecord. If preserve_anno is True, it'll only add prodigal
 
 ###Database.py
 
-Contains all of the database handling things, trying to keep all the database code in one place. I'm considering refactoring to an OO approach but not for now. Also defines/checks the data directory from config 
+Contains all of the database handling things, also defines/checks the data directory from config.
 
 #####`get_cursor()`
 
@@ -48,7 +48,7 @@ Creates a new Genome object. If created with a db_id, populates itself from the 
 
 Genome.fetch(genome_name) fetches and populates a Genome object from the database and returns it.
 
-####`Assembly(db_id,records,genome_id,)
+####`Assembly(db_id,records,genome_id,)`
 
 Creates a new Assembly object. if created with a db_id, populates itself. If created with a records iterable and a genome object, makes a new unsaved Assembly object.
 
@@ -62,13 +62,11 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 
 Saves contigs into the database with optional accession. Sequence is a string. `str(record.seq)` is what you want.
 
-#####`save_from_record(assembly_id,record)
+#####`save_from_record(assembly_id,record)`
 
 Exactly what it sounds like. Saves the sequence as a contig and the CDS features as genes.
 
-#####`save_binomial(genome_id,genus_species)`
 
-Saves a binomial name into the database for that genome.
 
 #####`save_genes(contig_id,features)`
 
