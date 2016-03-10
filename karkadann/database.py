@@ -57,6 +57,7 @@ def get_cursor():
 		curse.close()
 		conn.close()
 
+
 from random import sample
 from string import ascii_lowercase
 def save_record(record,salt=None):

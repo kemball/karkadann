@@ -97,7 +97,7 @@ class ContigTest(ut.TestCase):
 	def test_contig(self):
 		contone = save_contig(self.aid,"ATGCA")
 		conttwo = save_contig(self.aid,str(self.records[0].seq))
-		contthree = save_contig_from_record(self.aid,self.records[0])
+		contthree = save_from_record(self.aid,self.records[0])
 		contig_ids = get_contigs(self.aid)
 		self.assertIn(contone,contig_ids)
 		self.assertIn(conttwo,contig_ids)

@@ -60,9 +60,9 @@ Creates an assembly linked to a genome. Automagically saves the record to the fi
 
 Saves contigs into the database with optional accession. Sequence is a string. `str(record.seq)` is what you want.
 
-#####`save_contig_from_record(assembly_id,record)
+#####`save_from_record(assembly_id,record)
 
-Exactly what it sounds like. A naked wrapper around save_contig. record.id should be the accession number if it exists, please.
+Exactly what it sounds like. Saves the sequence as a contig and the CDS features as genes.
 
 #####`save_binomial(genome_id,genus_species)`
 
