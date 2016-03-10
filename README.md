@@ -46,7 +46,7 @@ Creates a new Genome object. If created with a db_id, populates itself from the 
 * `.added()` Returns the DateTime the genome was added to the database.
 * `.binomial(binomial=None)` Acts a flexible getter/setter for the binomial name associated with this genome.
 
-Genome.fetch(genome_name) fetches and populates a Genome object from the database and returns it.
+`Genome.fetch(genome_name)` fetches and populates a Genome object from the database and returns it.
 
 ####`Assembly(db_id,records,genome_id,)`
 
@@ -57,6 +57,8 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.is_real()` Checks if the Assembly has been saved to the database, and if so, returns its id.
 * `.is_record()` Returns an iterator over the gbfile underneath.
 * `.save_record()` Helper function to generate portable filenames that aren't used yet for saving the genbank records.
+
+`Assembly.fetch(genome_id)` fetches and populates an assembly based on a genome_id. Not the name, just the id. Unsatisfied with this.
 
 #####`save_contig(assembly_id,sequence,accession=None)`
 
