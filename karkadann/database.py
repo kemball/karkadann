@@ -57,65 +57,156 @@ def get_cursor():
 		curse.close()
 		conn.close()
 
+class dbThing:
+	def __init__(self,db_id):
+		_id = db_id
+	def __init__(self):
+		_id = None
 
-from random import sample
-from string import ascii_lowercase
-def save_record(record,salt=None):
-	if salt:
-		if not os.path.exists(os.path.join(gb_location,salt)):
-			SeqIO.write(record,os.path.join(gb_location,salt),'genbank')
-			return salt
+	def save(self):
+		raise NotImplementedError
+	def is_real(self):
+		raise NotImplementedError
+	def delete(self):
+		raise NotImplementedError
+
+
+
+
+class Genome(dbThing):
+
+	@classmethod
+	def fetch(cls,genome_name):
+		with get_cursor() as cur:
+			cur.execute("select id from genomes where name = %s;",(genome_name,))
+			return Genome(db_id=cur.fetchone()[0])
+
+
+	def __init__(self,db_id=None,genome_name=None):
+		if db_id:
+			with get_cursor() as cur:
+				cur.execute("select name,added from genomes where id = %s;",(db_id,))
+				self._id = db_id
+				self._name = cur.fetchone()[0]
+			if genome_name and self._name is not genome_name:
+				raise KeyError("Genome %s already exists with id %s."%(self._name,self._id))
 		else:
-			return save_record(record,salt+str(sample(ascii_lowercase,1)))
-	else:
-		return save_record(record,"".join(sample(ascii_lowercase,10)))
+			self._name = genome_name
+			self._id = None
+			self._added = None
 
-def read_record(assem_id):
-	with get_cursor() as cur:
-		cur.execute("select gb_record from assemblies where id = %s;",(assem_id,))
-		for salt in cur:
-			return SeqIO.parse(os.path.join(gb_location,salt[0]),'genbank')
-		raise IOError("assembly %s has no gb_record"%assem_id)
+	def save(self):
+		if not self.is_real():
+			with get_cursor() as cur:
+				cur.execute("insert into genomes (name) values (%s);",(self._name,))
+				self._id = cur.lastrowid
+
+	def delete(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("delete from genus_species where genome_id=%s;",(self._id,))
+				cur.execute("delete from genomes where id = %s;",(self._id,))
+		
+
+	def is_real(self):
+		with get_cursor() as cur:
+			cur.execute("select id from genomes where id = %s;",(self._id,))
+			for result in cur:
+				return result[0]
+			return None
+
+	def added(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("select added from genomes where id =%s;",(self._id,))
+				for result in cur:
+					return result
+
+		with get_cursor() as cur:
+			cur.execute("select binomial from genus_species where genome_id=%s;",(self._id,))
+			return cur.fetchone()[0]
+
+	def binomial(self,binomial=None):
+		if binomial:
+			with get_cursor() as cur:
+				cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s);",(self._id,binomial))
+		else:
+			with get_cursor() as cur:
+				cur.execute("select binomial from genus_species where genome_id=%s;",(self._id,))
+				return cur.fetchone()[0]
 
 
-def make_genome(genomename):
-	with get_cursor() as curse:
-		query = r"insert into genomes (name) values (%s);"
-		curse.execute(query,(genomename,))
-		return curse.lastrowid
 
-def get_genome(genomename):
-	with get_cursor() as curse:
-		query = "select id from genomes where name = %s;"
-		curse.execute(query,(genomename,))
-		result = curse.fetchall()
-		for q in result:
-			return q[0]
-		return None
+class Assembly(dbThing):
+
+
+	
+	def __init__(self,record=None,genome=None,fastq=None,assembled=None,accession=None,db_id=None):
+		if db_id:
+			with get_cursor() as cur:
+				cur.execute("select * from assemblies where id = %s;",(db_id,))
+				self._id,self._gb,self._fastq,self._assembled,self._genome_id,self._acc = cur.fetchone()
+		else:
+			self._gb = Assembly.save_record(record)
+			self._genome_id = genome.is_real()
+			self._fastq = fastq
+			self._assembled = assembled
+			self._acc = accession
+
+	@classmethod
+	def fetch(cls,genome_id):
+		with get_cursor() as cur:
+			cur.execute("select id from assemblies where genome_id = %s;",(genome_id,))
+			aid = cur.fetchone()[0]
+			if aid:
+				return Assembly(db_id=aid)
+
+
+	def save(self):
+		with get_cursor() as cur:
+			cur.execute("insert into assemblies (gb_record,fastq,assembled,genome_id,accession) values\
+									(%s,%s,%s,%s,%s);",(self._gb,self._fastq,self._assembled,self._genome_id,self._acc))
+			self._id = cur.lastrowid
+
+	def is_real(self):
+		with get_cursor() as cur:
+			cur.execute("select id from assemblies where id=%s;",(self._id,))
+			for result in cur:
+				return result[0]
+
+	def delete(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("delete from assemblies where id =%s;",(self._id))
+			os.remove(os.path.join(gb_location,self._gb))
+
+	def record(self):
+		if self.is_real():
+			return SeqIO.parse(os.path.join(gb_location,self._gb),'genbank')
+
+
+	
+	@staticmethod
+	def save_record(record,salt=None):
+		from random import sample
+		from string import ascii_lowercase
+		if salt:
+			if not os.path.exists(os.path.join(gb_location,salt)):
+				SeqIO.write(record,os.path.join(gb_location,salt),'genbank')
+				return salt
+			else:
+				return Assembly.save_record(record,salt+str(sample(ascii_lowercase,1)))
+		else:
+			return Assembly.save_record(record,"".join(sample(ascii_lowercase,10)))
+
+
 
 
 
 
 def make_assembly(record,genome_id,reads=None,assembled=None,accession=None):
-	with get_cursor() as curse:
-		query = "select id from genomes where id=%s;"
-		curse.execute(query,(genome_id,))
-		if not curse.fetchall():
-			raise ValueError("Tried to make an assembly %s but no matching genome was given")
-		gb_location = save_record(record)
-		query = "insert into assemblies (gb_record,genome_id) values (%s,%s);"
-		curse.execute(query,(gb_location,genome_id))
-		newassemid = curse.lastrowid
-		if reads:
-			query = "update assemblies set reads = %s where id = %s;"
-			curse.execute(query,(reads,newassemid))
-		if assembled:
-			query = "update assemblies set assembled = %s where id = %s;"
-			curse.execute(query,(assembled,newassemid))
-		if accession:
-			query = "update assemblies set accession = %s where id = %s"
-			curse.execute(query,(accession,newassemid))
-		return curse.lastrowid
+	new_assembly = Assembly(record,genome=genome_id,fastq=reads,assembled=assembled,accession=accession)
+	return new_assembly.is_real()
 
 
 
@@ -151,9 +242,7 @@ def read_contig_seq(contig_id):
 			return seq
 
 
-def save_binomial(genome_id,name):
-	with get_cursor() as cur:
-		cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s)",(genome_id,name))
+
 
 def save_genes(contig_id,features):
 	protlist = [f for f in features if f.type=="CDS"]
@@ -197,13 +286,5 @@ def import_hmm(hmmfile):
 	from shutils import copyfile
 	copyfile(hmmfile,os.path.join(hmm_location,shortname))
 	return shortname
-
-
-
-
-
-if __name__=="__main__":
-	genome_test()
-	make_assembly_test()
 
 

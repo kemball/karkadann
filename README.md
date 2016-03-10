@@ -34,27 +34,29 @@ Returns a cursor the database. It's thread safe, I promise. Use like so:
 >
 >	#database actions
 
-If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. Don't be afraid to open a bunch, though, they're cheap.
+If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. Don't be afraid to open a bunch, though, they're cheap. _they're not, but they will be_
 
-#####`save_record(record,salt=None)`
+#####`Genome(db_id,genome_name)`
 
-Saves the record provided in genbank format to the data_location directory. Returns the gb_record string used to look it up in the filesystem, so you can copy the data directory and update the config and everything will work correctly. If you provide a salt it'll try and use it, but if it's already in use it'll pick a new one. 
+Creates a new Genome object. If created with a db_id, populates itself from the database. If created with a genome_name, represents an unsaved Genome. 
 
-#####`read_record(assem_id)`
+* `.save()` Saves the genome to the database.
+* `.delete()` Deletes the genome from the database. (Handles registered binomial names)
+* `.is_real()` Checks if the Genome has been saved to the database, and if so, returns its id.
+* `.added()` Returns the DateTime the genome was added to the database.
+* `.binomial(binomial=None)` Acts a flexible getter/setter for the binomial name associated with this genome.
 
-Returns the SeqRecord associated with that assembly id. 
+Genome.fetch(genome_name) fetches and populates a Genome object from the database and returns it.
 
-#####`make_genome(name)`
+####`Assembly(db_id,records,genome_id,)
 
-Create a new genome named `name`. 
+Creates a new Assembly object. if created with a db_id, populates itself. If created with a records iterable and a genome object, makes a new unsaved Assembly object.
 
-#####`get_genome(name)`
-
-Returns the genome id associated with `name`.
-
-#####`make_assembly(record,genome_id,kwargs)`
-
-Creates an assembly linked to a genome. Automagically saves the record to the filesystem in the data directory.
+* `.save()` Saves the assembly to the database.
+* `.delete()` Deletes the assembly from the database. (Handles the gbfile backup)
+* `.is_real()` Checks if the Assembly has been saved to the database, and if so, returns its id.
+* `.is_record()` Returns an iterator over the gbfile underneath.
+* `.save_record()` Helper function to generate portable filenames that aren't used yet for saving the genbank records.
 
 #####`save_contig(assembly_id,sequence,accession=None)`
 
