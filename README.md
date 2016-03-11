@@ -34,7 +34,7 @@ Returns a cursor the database. It's thread safe, I promise. Use like so:
 >
 >	#database actions
 
-If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. Don't be afraid to open a bunch, though, they're cheap. _they're not, but they will be_
+If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. Don't be afraid to open a bunch, though, they're cheap. <sup><sub>_they're not, but they will be_</sub></sup>
 
 #####`Genome(db_id,genome_name)`
 
@@ -48,7 +48,7 @@ Creates a new Genome object. If created with a db_id, populates itself from the 
 
 `Genome.fetch(genome_name)` fetches and populates a Genome object from the database and returns it.
 
-####`Assembly(db_id)` or `Assemblyrecords,genome_id,)`
+####`Assembly(db_id)` or `Assembly(records,genome_id,)`
 
 Creates a new Assembly object. if created with a db_id, populates itself. If created with a records iterable and a genome object, makes a new unsaved Assembly object.
 
@@ -56,11 +56,12 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.delete()` Deletes the assembly from the database. (Handles the gbfile backup)
 * `.is_real()` Checks if the Assembly has been saved to the database, and if so, returns its id.
 * `.is_record()` Returns an iterator over the gbfile underneath.
-* `.save_record()` Helper function to generate portable filenames that aren't used yet for saving the genbank records.
+* `.save_record()` Helper function to generate portable filenames that aren't used yet for saving the genbank records. You shouldn't need this at all.
+* `.contigs()` Returns a list of contigs in this assembly.
 
-`Assembly.fetch(genome_id)` fetches and populates an assembly based on a genome_id. Not the name, just the id. Unsatisfied with this.
+`Assembly.fetch(genome_id)` fetches a list of assemblies based on the genome_id. 99% of the time there won't be more than one but the database supports that on purpose, so it doesn't make sense to ignore it here.
 
-####`Contig(db_id)` or `Contig(seq=None,assembly=None,accession=None)`
+####`Contig(db_id)` or `Contig(seq,assembly,accession)`
 
 * `.save()` Saves the Contig
 * `.delete()` Deletes the contig from the database. (handles genes correctly)

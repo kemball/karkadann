@@ -46,7 +46,7 @@ def get_cursor():
 	# This looks like a generator, but it's not. It returns many small generators instead of one large 
 	# connection generator. I could also put connection pools etc in here but that's work so I haven't.
 	# the whole point being I don't have to use closing() everywhere, I have thread-safe cursors,
-	# AND I can put in pools later.
+	# AND I can put in pools later. (I already tried once and screwed it up somehow. Oh well.)
 	try:
 		conn = mysql.connect(host=host,user=username,passwd=password,db=dbname)
 		curse = conn.cursor()
@@ -139,10 +139,6 @@ class Genome(dbThing):
 			with get_cursor() as cur:
 				cur.execute("select id from assemblies where genome_id = %s;",(self._id,))
 				return [Assembly(db_id=x) for (x,) in cur.fetchall()]
-
-
-
-
 
 class Assembly(dbThing):
 
