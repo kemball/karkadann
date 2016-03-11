@@ -2,6 +2,7 @@
 import MySQLdb as mysql 
 import ConfigParser,os
 from Bio import SeqIO
+from Bio import SeqFeature
 from pkg_resources import resource_stream
 config_stream = resource_stream(__name__,'karkadann.cfg')
 config = ConfigParser.SafeConfigParser()
@@ -58,10 +59,6 @@ def get_cursor():
 		conn.close()
 
 class dbThing:
-	def __init__(self,db_id):
-		_id = db_id
-	def __init__(self):
-		_id = None
 
 	def save(self):
 		raise NotImplementedError
@@ -103,6 +100,8 @@ class Genome(dbThing):
 
 	def delete(self):
 		if self.is_real():
+			for assem in self.assemblies():
+				assem.delete()
 			with get_cursor() as cur:
 				cur.execute("delete from genus_species where genome_id=%s;",(self._id,))
 				cur.execute("delete from genomes where id = %s;",(self._id,))
@@ -135,6 +134,14 @@ class Genome(dbThing):
 				cur.execute("select binomial from genus_species where genome_id=%s;",(self._id,))
 				return cur.fetchone()[0]
 
+	def assemblies(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("select id from assemblies where genome_id = %s;",(self._id,))
+				return [Assembly(db_id=x) for (x,) in cur.fetchall()]
+
+
+
 
 
 class Assembly(dbThing):
@@ -157,9 +164,8 @@ class Assembly(dbThing):
 	def fetch(cls,genome_id):
 		with get_cursor() as cur:
 			cur.execute("select id from assemblies where genome_id = %s;",(genome_id,))
-			aid = cur.fetchone()[0]
-			if aid:
-				return Assembly(db_id=aid)
+			aid = cur.fetchall()
+			return [Assembly(db_id=x) for (x,) in aid]
 
 
 	def save(self):
@@ -176,6 +182,8 @@ class Assembly(dbThing):
 
 	def delete(self):
 		if self.is_real():
+			for contig in self.contigs():
+				contig.delete()
 			with get_cursor() as cur:
 				cur.execute("delete from assemblies where id =%s;",(self._id))
 			os.remove(os.path.join(gb_location,self._gb))
@@ -184,6 +192,11 @@ class Assembly(dbThing):
 		if self.is_real():
 			return SeqIO.parse(os.path.join(gb_location,self._gb),'genbank')
 
+	def contigs(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("select id from contigs where assembly_id=%s;",(self._id,))
+				return [Contig(db_id=x[0]) for x in cur.fetchall()]
 
 	
 	@staticmethod
@@ -199,92 +212,102 @@ class Assembly(dbThing):
 		else:
 			return Assembly.save_record(record,"".join(sample(ascii_lowercase,10)))
 
-
-
-
-
-
-def make_assembly(record,genome_id,reads=None,assembled=None,accession=None):
-	new_assembly = Assembly(record,genome=genome_id,fastq=reads,assembled=assembled,accession=accession)
-	return new_assembly.is_real()
-
-
-
-def save_contig(assembly_id,sequence,accession=None):
-	with get_cursor() as cur:
-		if accession:
-			cur.execute("insert into contigs \
-						(assembly_id,sequence,accession)\
-						 values (%s,%s,%s);",
-						 (assembly_id,sequence,accession))
+class Contig(dbThing):
+	def __init__(self,seq=None,assembly=None,accession=None,db_id=None):
+		if db_id:
+			with get_cursor() as cur:
+				cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;",(db_id,))
+				self._id,self._seq,self._assembly_id,self._acc = cur.fetchone()
 		else:
-			cur.execute("insert into contigs \
-				(assembly_id,sequence) values (%s,%s);",(assembly_id,sequence))
-		return cur.lastrowid
+			self._seq = seq
+			self._assembly_id = assembly.is_real()
+			self._acc = accession
 
-def save_from_record(assembly_id,record):
-	#if record.id isn't the accession number some stuff is going to get a little bit broken.
-	contid = save_contig(assembly_id,str(record.seq),record.id)
-	save_genes(contid,record.features)
-	return contid
+	def save(self):
+		with get_cursor() as cur:
+			cur.execute("insert into contigs (sequence,assembly_id,accession) \
+						values (%s,%s,%s);",(self._seq,self._assembly_id,self._acc))
+			self._id = cur.lastrowid
 
-def get_contigs(assemid):
-	with get_cursor() as curse:
-		curse.execute("select id from contigs where assembly_id=%s;",(assemid,))
-		return [contig_id[0] for contig_id in curse]
+	def is_real(self):
+		with get_cursor() as cur:
+			cur.execute("select id from contigs where id=%s;",(self._id,))
+			for result in cur:
+				return result[0]
 
+	def delete(self):
+		if self.is_real():
+			for gene in self.genes():
+				gene.delete()
+			with get_cursor() as cur:
+				cur.execute("delete from contigs where id = %s;",(self._id,))
 
-def read_contig_seq(contig_id):
-	with get_cursor() as cur:
-		query = "select sequence,accession from contigs where id = %s;"
-		cur.execute(query,(contig_id,))
-		for seq,acc in cur:
-			return seq
+	def seq(self):
+		return self._seq
 
+	def acc(self):
+		return self._acc
 
+	def genes(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("select id from genes where contig = %s;",(self._id,))
+				return [Gene(db_id=x[0]) for x in cur]
 
-
-def save_genes(contig_id,features):
-	protlist = [f for f in features if f.type=="CDS"]
-	for f in protlist:
-
-		if "protein_id" in f.qualifiers.keys():
-			accession = f.qualifiers['protein_id'][0]
+class Gene(dbThing):
+	def __init__(self, db_id = None, \
+						translation = None,\
+						contig=None,\
+						start = None,\
+						end= None,\
+						strand=None,\
+						accession=None):
+		if db_id:
+			with get_cursor() as cur:
+				cur.execute("select * from genes where id=%s;",(db_id,))
+				self._id,self._translation,self._contig,self._start,self._end,self._strand,self._acc = cur.fetchone()
 		else:
-			accession = None
-
-		if "translation" in f.qualifiers.keys():
-			translation = f.qualifiers["translation"][0]
-		else:
-			translation = None
-		start = f.location.start
-		end = f.location.end
-		strand = str(f.location.strand) #str required otherwise the enum in SQL gets confused.
-		save_gene(contig_id,translation,start,end,strand,accession)
+			self._translation = translation
+			self._contig = contig.is_real()
+			self._start = start
+			self._end = end
+			self._strand = strand
+			self._acc = accession
 
 
+	def save(self):
+		with get_cursor() as cur:
+			cur.execute("insert into genes (translation,start,end,strand,contig,accession) values \
+											(%s,%s,%s,%s,%s,%s);",\
+											(self._translation,self._start,self._end,self._strand,self._contig,self._acc))
+			self._id = cur.lastrowid
+	def is_real(self):
+		with get_cursor() as cur:
+			cur.execute("select id from genes where id = %s;",(self._id))
+			for result in cur:
+				return result[0]
+	def delete(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("delete from genes where id =%s;",(self._id,))
 
-def save_gene(contig_id,translation,start,end,strand,accession=None):
-	with get_cursor() as cur:
-		if accession:
-			query = "insert into genes (contig,translation,start,end,strand,accession)\
-					values (%s,%s,%s,%s,%s,%s);"
-			cur.execute(query,(contig_id,translation,start,end,strand,accession))
-		else:
-			query = "insert into genes (contig,translation,start,end,strand)\
-					values (%s,%s,%s,%s,%s);"
-			cur.execute(query,(contig_id,translation,start,end,strand))
+	@property	
+	def translation(self):
+		return self._translation
 
-		return cur.lastrowid
+	@translation.setter
+	def translation(self,new_trans):
+		self._translation=str(new_trans)
 
 
-def import_hmm(hmmfile):
-	shortname = os.path.basename(hmmfile)
-	with get_cursor() as cur:
-		query = "insert into hmm_storage filename value %s;"
-		cur.execute(query,(shortname,))
-	from shutils import copyfile
-	copyfile(hmmfile,os.path.join(hmm_location,shortname))
-	return shortname
+	@property
+	def location(self):
+		return SeqFeature.FeatureLocation(self._start,self._end,strand = int(self._strand))
+
+	@location.setter
+	def location(self,new_location):
+		self._start = new_location.start
+		self._end = new_location.end
+		self._strand = new_location.strand
 
 

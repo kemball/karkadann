@@ -28,6 +28,11 @@ class GenomeTest(ut.TestCase):
 			newgenome.delete()
 		self.assertFalse(newgenome.is_real())
 
+	def test_make_insane_genome(self):
+
+		with self.assertRaises(Exception):
+			foo = Genome(db_id=42)
+
 	def test_fetch_genome(self):
 		newgenome = Genome(genome_name="testgenome")
 		newgenome.save()
@@ -72,6 +77,14 @@ class GenomeTest(ut.TestCase):
 			cur.execute("select binomial from genus_species where genome_id=%s;",newgenome._id)
 			self.assertEqual(cur.fetchone(),None)
 
+	def test_assemblies(self):
+		newgenome = Genome(genome_name="snickersnack")
+		newgenome.save()
+		try:
+			self.assertFalse(newgenome.assemblies())
+		finally:
+			newgenome.delete()
+
 
 
 
@@ -96,6 +109,30 @@ class AssemblyTest(ut.TestCase):
 			self.assertFalse(newassem.is_real())
 		finally:
 			new_genome.delete()
+
+	def test_parent_watches(self):
+		new_genome = Genome(genome_name='test')
+		new_genome.save()
+		try:
+			newassem = Assembly(self.records,new_genome)
+			newassem.save()
+			try:
+				assembly = new_genome.assemblies()[0]
+				self.assertEqual(assembly.is_real(),newassem.is_real())
+				
+			finally:
+				newassem.delete()
+		finally:
+			new_genome.delete()
+
+
+	def test_delete_by_genome(self):
+		new_genome = Genome(genome_name="squiffle")
+		new_genome.save()
+		new_assem = Assembly(self.records,new_genome)
+		new_assem.save()
+		new_genome.delete()
+		self.assertFalse(new_assem.is_real())
 
 	def test_gb_record(self):
 		new_genome= Genome(genome_name="foobarbazqux")
@@ -136,7 +173,7 @@ class AssemblyTest(ut.TestCase):
 			new_assem = Assembly(self.records,new_genome)
 			new_assem.save()
 			try:
-				two_assem = Assembly.fetch(new_genome.is_real())
+				two_assem = Assembly.fetch(new_genome.is_real())[0]
 				self.assertEqual(two_assem.is_real(),new_assem.is_real())
 				two_rec = list(two_assem.record())
 				new_rec = list(new_assem.record())
@@ -152,77 +189,106 @@ class ContigTest(ut.TestCase):
 	records = SeqIO.parse(os.path.join(data_location,'test/testassem.gb'),'genbank')
 	records = list(records)
 	def setUp(self):
-		self.gid = make_genome('test')
-		self.aid = make_assembly(self.records,self.gid)
+		self.test_genome = Genome(genome_name="testgenome")
+		self.test_genome.save()
+		self.test_assembly = Assembly(record=self.records,genome=self.test_genome)
+		self.test_assembly.save()
 	def tearDown(self):
-		delete_record(aid)
-		with get_cursor() as cur:
-			cur.execute("delete from assemblies where id = %s;",(self.aid,))
-			cur.execute("delete from genomes where id = %s;",(self.gid,))
+		self.test_genome.delete()
+		self.assertFalse(self.test_assembly.is_real())
 
-	def test_contig(self):
-		contone = save_contig(self.aid,"ATGCA")
-		conttwo = save_contig(self.aid,str(self.records[0].seq))
-		contthree = save_from_record(self.aid,self.records[0])
-		contig_ids = get_contigs(self.aid)
-		self.assertIn(contone,contig_ids)
-		self.assertIn(conttwo,contig_ids)
-		self.assertIn(contthree,contig_ids)
-		self.assertEqual(read_contig_seq(contone),"ATGCA")
-		self.assertEqual(read_contig_seq(conttwo),read_contig_seq(contthree))
-		with get_cursor() as cur:
-			cur.executemany("delete from genes where contig = %s;",[(contone,),(conttwo,),(contthree)])
-			cur.executemany("delete from contigs where id = %s;",[(contone,),(conttwo,),(contthree)])
-		with get_cursor() as cur:
-			cur.execute("select id from contigs where assembly_id=%s;",(self.aid,))
-			self.assertEqual(cur.fetchone(),None)
+	def test_make_contig(self):
+		test_contig = Contig(seq="ATCGATCG",assembly=self.test_assembly)
+		test_contig.save()
+		try:
+			self.assertEqual(test_contig.seq(), "ATCGATCG")
+			self.assertTrue(test_contig.is_real())
+		finally:
+			test_contig.delete()
+		self.assertFalse(test_contig.is_real())
+
+
+	def test_delete_assembly(self):
+		other_assem = Assembly(record=self.records,genome=self.test_genome)
+		other_assem.save()
+		test_contig = Contig(seq="ATCGATCG",assembly=other_assem)
+		test_contig.save()
+		self.assertTrue(test_contig.is_real())
+		other_assem.delete()
+		self.assertFalse(test_contig.is_real())
+
+	def test_long_contig(self):
+		#about 8Mb
+		sequence = "ATCGATCG"*1000000
+		test_contig = Contig(seq=sequence,assembly=self.test_assembly)
+		test_contig.save()
+		try:
+			self.assertTrue(test_contig.seq(), sequence)
+		finally:
+			test_contig.delete()
+
+	def test_set_accession(self):
+		test_contig = Contig(seq="ATCGATCG",assembly=self.test_assembly,accession="WP_1337.1")
+		test_contig.save()
+		try:
+			self.assertEqual(test_contig.acc(),"WP_1337.1")
+		finally:
+			test_contig.delete()
+
+	def test_get_genes(self):
+		test_contig = Contig(seq="ATCGATCG",assembly=self.test_assembly,accession="WP_1337.1")
+		test_contig.save()
+		try:
+			#I know the laziest but genes need their own tests too.
+			test_gene = Gene(translation = "MICHAELBIOLOGIST",
+						contig=test_contig,
+						start = 0,
+						end = 2,
+						strand = "-1",
+						accession = "WP_1337.1")
+			test_gene.save()
+			genes = test_contig.genes()
+			self.assertEqual(genes[0].is_real(),test_gene.is_real())
+			self.assertEqual(len(genes),1)
+		finally:
+			test_contig.delete()
+		self.assertFalse(test_gene.is_real())
+
 
 
 
 class GeneTest(ut.TestCase):
 	records = SeqIO.parse(os.path.join(data_location,'test/testassem.gb'),'genbank')
 	records = list(records)
+	
 	def setUp(self):
-		self.gid = make_genome('test')
-		self.aid = make_assembly(self.records,self.gid)
-		self.contid = save_contig(self.aid,str(self.records[0].seq),self.records[0].id)
+		self.test_genome = Genome(genome_name="testgenome")
+		self.test_genome.save()
+		self.test_assembly = Assembly(record=self.records,genome=self.test_genome)
+		self.test_assembly.save()
+		self.test_contig = Contig(seq="ATCGATCG"*1000,assembly=self.test_assembly)
+		self.test_contig.save()
 
 	def tearDown(self):
-		delete_record(self.aid)
-		with get_cursor() as cur:
-			cur.execute("delete from contigs where id=%s;",(self.contid,))
-			cur.execute("delete from assemblies where id = %s;",(self.aid,))
-			cur.execute("delete from genomes where id = %s;",(self.gid,))
+		self.test_genome.delete()
+		self.assertFalse(self.test_assembly.is_real())
+		self.assertFalse(self.test_contig.is_real())
 
-	def test_save_genes(self):
-		save_genes(self.contid,self.records[0].features)
-		self.assertEqual(str(self.records[0].seq),read_contig_seq(self.contid))
-		featlist = [feat for feat in self.records[0].features if feat.type=="CDS"]
-
-
-		with get_cursor() as cur:
-			cur.execute("select count(*) from genes where contig = %s;",(self.contid,))
-			self.assertEqual(cur.fetchone()[0],len(featlist))
-
-
-		with get_cursor() as cur:
-			cur.execute("delete from genes where contig = %s;",(self.contid,))
-
-	def test_save_gene(self):
-		featlist = [feat for feat in self.records[0].features if feat.type=="CDS"]
-		feature = featlist[0]
-		translation = feature.qualifiers['translation'][0]
-		start = feature.location.start
-		end = feature.location.end
-		strand = str(feature.location.strand)
-		gene_id = save_gene(self.contid,translation,start,end,strand)
-		with get_cursor() as cur:
-			cur.execute("select id from genes where id = %s;",(gene_id,))
-			self.assertIsNot(cur.fetchone(),None)
-		with get_cursor() as cur:
-			cur.execute("delete from genes where id = %s;",(gene_id,))
-
-
+	def test_make_gene(self):
+		test_gene = Gene(translation = "MICHAELBIOLOGIST",
+						contig=self.test_contig,
+						start = 0,
+						end = 2,
+						strand = "-1",
+						accession = "WP_1337.1")
+		test_gene.save()
+		try:
+			self.assertTrue(test_gene.is_real())
+			self.assertEqual(test_gene.location.start,0)
+			self.assertEqual(test_gene.location.strand,-1)
+			self.assertEqual(test_gene.translation,"MICHAELBIOLOGIST")
+		finally:
+			test_gene.delete()
 
 
 

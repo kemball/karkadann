@@ -48,7 +48,7 @@ Creates a new Genome object. If created with a db_id, populates itself from the 
 
 `Genome.fetch(genome_name)` fetches and populates a Genome object from the database and returns it.
 
-####`Assembly(db_id,records,genome_id,)`
+####`Assembly(db_id)` or `Assemblyrecords,genome_id,)`
 
 Creates a new Assembly object. if created with a db_id, populates itself. If created with a records iterable and a genome object, makes a new unsaved Assembly object.
 
@@ -60,32 +60,28 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 
 `Assembly.fetch(genome_id)` fetches and populates an assembly based on a genome_id. Not the name, just the id. Unsatisfied with this.
 
-#####`save_contig(assembly_id,sequence,accession=None)`
+####`Contig(db_id)` or `Contig(seq=None,assembly=None,accession=None)`
 
-Saves contigs into the database with optional accession. Sequence is a string. `str(record.seq)` is what you want.
+* `.save()` Saves the Contig
+* `.delete()` Deletes the contig from the database. (handles genes correctly)
+* `.is_real()` Checks if the Contig has been saved to the database, and if so, returns its id.
+* `.seq()` Returns the sequence of the contig.
+* `.acc()` Returns the accession number for the contig.
+* `.genes()` Returns a list of the Genes in the contig.
 
-#####`save_from_record(assembly_id,record)`
+####`Gene(db_id)` or `Gene(translation,contig,start,end,strand,accession)`
 
-Exactly what it sounds like. Saves the sequence as a contig and the CDS features as genes.
-
-
-
-#####`save_genes(contig_id,features)`
-
-Saves a bunch of genes to the specified contig, using features with locations and so on.
-
-#####`save_gene(contig_id,translation,start,end,strand,accession=None)
-
-Saves a single gene to the contig.
+* `.save()` Saves the Gene to the database.
+* `.delete()` Deletes the gene from the database.
+* `.is_real()` Checks if the Gene has been saved, and if so returns its id.
+* `.location` Returns the FeatureLocation for the Gene.
+* `.translation` Returns the AA sequence for the Gene.
 
 ##hmm.py
 
 This should have the hmm-parsing and database-updating code, but currently NIY.
 
-##slurp.py
+##assimilate.py
 
 Tools for importing genbank files. Deciding on useful names, validating accession numbers, species names, etc. All that logic goes in here so it doesn't have to go anywhere else.
 
-#####`annotate_save(gbfile,genomename)`
-
-Reads a genbank file and a name, makes a genome for it, makes an assembly, saves the record, saves all the contigs with accessions as long as the record.id is the accession number, and annotates it. 
