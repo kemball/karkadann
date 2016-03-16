@@ -33,6 +33,9 @@ if not os.access(hmm_location,os.R_OK):
 
 
 from contextlib import contextmanager
+import threading
+threadLocal = threading.local()
+
 
 @contextmanager
 def get_cursor():
@@ -47,26 +50,44 @@ def get_cursor():
 	# connection generator. I could also put connection pools etc in here but that's work so I haven't.
 	# the whole point being I don't have to use closing() everywhere, I have thread-safe cursors,
 	# AND I can put in pools later. (I already tried once and screwed it up somehow. Oh well.)
+	
+
+	conn = mysql.connect(host=host,user=username,passwd=password,db=dbname)
 	try:
-		conn = mysql.connect(host=host,user=username,passwd=password,db=dbname)
 		curse = conn.cursor()
-		yield curse
-		conn.commit()
-		#if something bad happened don't commit
-		# I checked, it works.
+		try:
+			yield curse
+			conn.commit()
+			#if something bad happened don't commit
+			# I checked, it works.
+		finally:
+			curse.close()
 	finally:
-		curse.close()
 		conn.close()
+
 
 class dbThing:
 
-	def save(self):
+	def save(self,cur=None):
 		raise NotImplementedError
-	def is_real(self):
+	def is_real(self,cur=None):
 		raise NotImplementedError
-	def delete(self):
+	def delete(self,cur=None):
 		raise NotImplementedError
 
+
+from functools import wraps
+
+def cursor_required(f):
+	@wraps(f)
+	def cursored_fxn(*args,**kwargs):
+		if 'cur' in kwargs.keys():
+			return f(*args,**kwargs)
+		else:
+			with get_cursor() as cur:
+				kwargs['cur']=cur
+				return f(*args,**kwargs)
+	return cursored_fxn
 
 
 
@@ -92,51 +113,66 @@ class Genome(dbThing):
 			self._id = None
 			self._added = None
 
-	def save(self):
-		if not self.is_real():
+	def save(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.save(cur=cur)
+		else:
+			if not self.is_real(cur):
 				cur.execute("insert into genomes (name) values (%s);",(self._name,))
 				self._id = cur.lastrowid
 
-	def delete(self):
-		if self.is_real():
-			for assem in self.assemblies():
-				assem.delete()
+	def delete(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.delete(cur=cur)
+		else:
+			if self.is_real(cur):
+				for assem in self.assemblies():
+					assem.delete(cur)
 				cur.execute("delete from genus_species where genome_id=%s;",(self._id,))
 				cur.execute("delete from genomes where id = %s;",(self._id,))
 		
 
-	def is_real(self):
-		with get_cursor() as cur:
+	def is_real(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.is_real(cur=cur)
+		else:
 			cur.execute("select id from genomes where id = %s;",(self._id,))
-			for result in cur:
+			for result in cur.fetchall():
 				return result[0]
 			return None
 
-	def added(self):
-		if self.is_real():
+	def added(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.added(cur=cur)
+		else:
+
+			if self.is_real(cur):
 				cur.execute("select added from genomes where id =%s;",(self._id,))
-				for result in cur:
+				for result in cur.fetchall():
 					return result
 
-		with get_cursor() as cur:
-			cur.execute("select binomial from genus_species where genome_id=%s;",(self._id,))
-			return cur.fetchone()[0]
 
-	def binomial(self,binomial=None):
-		if binomial:
+	def binomial(self,binomial=None,cur=None):
+		if not cur:
 			with get_cursor() as cur:
-				cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s);",(self._id,binomial))
+				return self.binomial(binomial=binomial,cur=cur)
 		else:
-			with get_cursor() as cur:
+			if binomial:
+				cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s);",(self._id,binomial))
+			else:
 				cur.execute("select binomial from genus_species where genome_id=%s;",(self._id,))
 				return cur.fetchone()[0]
 
-	def assemblies(self):
-		if self.is_real():
+	def assemblies(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.assemblies(cur=cur)
+		else:
+			if self.is_real(cur):
 				cur.execute("select id from assemblies where genome_id = %s;",(self._id,))
 				return [Assembly(db_id=x) for (x,) in cur.fetchall()]
 
@@ -157,40 +193,60 @@ class Assembly(dbThing):
 			self._acc = accession
 
 	@classmethod
-	def fetch(cls,genome_id):
-		with get_cursor() as cur:
+	def fetch(cls,genome_id,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return Assembly.fetch(genome_id,cur=cur)
+		else:
 			cur.execute("select id from assemblies where genome_id = %s;",(genome_id,))
 			aid = cur.fetchall()
 			return [Assembly(db_id=x) for (x,) in aid]
 
 
-	def save(self):
-		with get_cursor() as cur:
+	def save(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.save(cur=cur)
+		else:
 			cur.execute("insert into assemblies (gb_record,fastq,assembled,genome_id,accession) values\
 									(%s,%s,%s,%s,%s);",(self._gb,self._fastq,self._assembled,self._genome_id,self._acc))
 			self._id = cur.lastrowid
 
-	def is_real(self):
-		with get_cursor() as cur:
+	def is_real(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.is_real(cur=cur)
+		else:
 			cur.execute("select id from assemblies where id=%s;",(self._id,))
-			for result in cur:
+			for result in cur.fetchall():
 				return result[0]
 
-	def delete(self):
-		if self.is_real():
-			for contig in self.contigs():
-				contig.delete()
+	def delete(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.delete(cur=cur)
+		else:
+			if self.is_real(cur):
+				for contig in self.contigs(cur):
+					contig.delete(cur)
 				cur.execute("delete from assemblies where id =%s;",(self._id))
 			os.remove(os.path.join(gb_location,self._gb))
 
-	def record(self):
-		if self.is_real():
-			return SeqIO.parse(os.path.join(gb_location,self._gb),'genbank')
-
-	def contigs(self):
-		if self.is_real():
+	def record(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.record(cur=cur)
+		else:
+			if self.is_real(cur=cur):
+				return SeqIO.parse(os.path.join(gb_location,self._gb),'genbank')
+
+
+	def contigs(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.contigs(cur=cur)
+		else:
+			if self.is_real(cur):
 				cur.execute("select id from contigs where assembly_id=%s;",(self._id,))
 				return [Contig(db_id=x[0]) for x in cur.fetchall()]
 
@@ -219,23 +275,33 @@ class Contig(dbThing):
 			self._assembly_id = assembly.is_real()
 			self._acc = accession
 
-	def save(self):
-		with get_cursor() as cur:
+	def save(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.save(cur=cur)
+		else:
 			cur.execute("insert into contigs (sequence,assembly_id,accession) \
 						values (%s,%s,%s);",(self._seq,self._assembly_id,self._acc))
 			self._id = cur.lastrowid
 
-	def is_real(self):
-		with get_cursor() as cur:
+	def is_real(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.is_real(cur=cur)
+		else:
 			cur.execute("select id from contigs where id=%s;",(self._id,))
-			for result in cur:
+			for result in cur.fetchall():
 				return result[0]
 
-	def delete(self):
-		if self.is_real():
-			for gene in self.genes():
-				gene.delete()
+	def delete(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.delete(cur=cur)
+		else:
+
+			if self.is_real(cur=cur):
+				for gene in self.genes(cur=cur):
+					gene.delete(cur=cur)
 				cur.execute("delete from contigs where id = %s;",(self._id,))
 
 	def seq(self):
@@ -244,11 +310,14 @@ class Contig(dbThing):
 	def acc(self):
 		return self._acc
 
-	def genes(self):
-		if self.is_real():
+	def genes(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.genes(cur=cur)
+		else:
+			if self.is_real(cur=cur):
 				cur.execute("select id from genes where contig = %s;",(self._id,))
-				return [Gene(db_id=x[0]) for x in cur]
+				return [Gene(db_id=x[0]) for x in cur.fetchall()]
 
 class Gene(dbThing):
 	def __init__(self, db_id = None, \
@@ -271,20 +340,30 @@ class Gene(dbThing):
 			self._acc = accession
 
 
-	def save(self):
-		with get_cursor() as cur:
+	def save(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.save(cur=cur)
+		else:
 			cur.execute("insert into genes (translation,start,end,strand,contig,accession) values \
 											(%s,%s,%s,%s,%s,%s);",\
 											(self._translation,self._start,self._end,self._strand,self._contig,self._acc))
 			self._id = cur.lastrowid
-	def is_real(self):
-		with get_cursor() as cur:
-			cur.execute("select id from genes where id = %s;",(self._id))
-			for result in cur:
-				return result[0]
-	def delete(self):
-		if self.is_real():
+
+	def is_real(self,cur=None):
+		if not cur:
 			with get_cursor() as cur:
+				return self.is_real(cur=cur)
+		else:
+			cur.execute("select id from genes where id = %s;",(self._id))
+			for result in cur.fetchall():
+				return result[0]
+	def delete(self,cur=None):
+		if not cur:
+			with get_cursor() as cur:
+				return self.delete(cur=cur)
+		else:
+			if self.is_real(cur):
 				cur.execute("delete from genes where id =%s;",(self._id,))
 
 	@property	
