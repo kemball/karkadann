@@ -386,3 +386,15 @@ class Gene(dbThing):
 		self._strand = new_location.strand
 
 
+class Hit(dbThing):
+	def __init__(self):
+		pass
+
+	def delete(self, cur=None):
+		pass
+
+	def save(self, cur=None):
+		pass
+
+	def is_real(self, cur=None):
+		pass

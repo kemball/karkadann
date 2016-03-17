@@ -292,9 +292,7 @@ class GeneTest(ut.TestCase):
 
 
 
-class HmmTest(ut.TestCase):
-	def test_import(self):
-		pass
+
 
 
 
