@@ -66,7 +66,7 @@ def assimilate_from_ncbi(ncbifile):
 	newgenome.binomial(reannotated_record[0].annotations['organism'])
 
 	try:
-		m = re.findall(r'Assembly:(\S)+', reannotated_record[0].dbxrefs[0])
+		m = re.findall(r'Assembly:(\S+)', reannotated_record[0].dbxrefs[0])
 		if m:
 			assem_acc = m[0]
 		else:
