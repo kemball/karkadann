@@ -78,11 +78,30 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.location` Returns the FeatureLocation for the Gene.
 * `.translation` Returns the AA sequence for the Gene.
 
-##hmm.py
+####`Hit(db_id)` or `Hit(Gene,score,hmm)`
 
-This should have the hmm-parsing and database-updating code, but currently NIY.
+* `.save()` Saves the hit to the database.
+* `.delete()` Deletes the hit from the database.
+* `.is_real()` Checks if the hit has been saved, and if so returns its id.
+* `.score` Pseudoproperty. Returns the bitscore of the hit.
+
+##hmm.py
+#### `list_hmms()`
+ Lists all the hmms available in the data directory karkadann maintains.
+#### `scan_assembly(assembly)`
+Runs all the hmms against the specified assembly. Totally unthreaded.
+#### `profile(genes,hmm)`
+Takes an iterator of Gene objects and an hmm string 'AfsA.hmm' for example. Does the needful.
+
 
 ##assimilate.py
 
 Tools for importing genbank files. Deciding on useful names, validating accession numbers, species names, etc. All that logic goes in here so it doesn't have to go anywhere else.
 
+####`assimilate_from_ncbi(ncbifile)`
+
+Does exactly what it sounds like. Takes just over three minutes for a 10Mb genome, counting time taken for prodigal, merging the features together, writing all the stuff to the database. Could take less time, but prodigal takes 20-40 seconds no matter what. Picks a genome name from the description of the genbank file. Reads the assembly accession number off DBLINK. Could cross-reference against Biosample if we wanted that way.
+
+####`make_standard(records)`
+
+This adds 'translation' qualifiers to partial genes that hang off contig borders and detects and annotates assembly gaps. It doesn't make any real decisions but it means I don't have to worry about how it works anywhere else in the code.

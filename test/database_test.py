@@ -247,7 +247,7 @@ class ContigTest(ut.TestCase):
 						strand = "-1",
 						accession = "WP_1337.1")
 			test_gene.save()
-			genes = test_contig.genes()
+			genes = list(test_contig.genes())
 			self.assertEqual(genes[0].is_real(),test_gene.is_real())
 			self.assertEqual(len(genes),1)
 		finally:

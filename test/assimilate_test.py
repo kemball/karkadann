@@ -22,11 +22,22 @@ class AssimilateTest(ut.TestCase):
 		self.assertIn('translation', recs[0].features[4].qualifiers.keys())
 
 	def test_assimilate(self):
-		assimilate_from_ncbi(self.testgbfile)
+		from time import time
+		before = time()
+		ng = assimilate_from_ncbi(self.testgbfile)
+		now = time()
+		print "running assimilate took %s seconds" % str(now-before)
+		ng.delete()
+		print "running delete took %s seconds"% str(time()-now)
 
 	def test_slug_twins(self):
 		# when they have very similar description fields and have trouble making unique genome names.
-		pass
+		ng = assimilate_from_ncbi(self.testgbfile)
+		ng2 = assimilate_from_ncbi(self.testgbfile)
+		self.assertNotEqual(ng.is_real(),ng2.is_real())
+		ng.delete()
+		ng2.delete()
+
 
 
 if __name__ == "__main__":

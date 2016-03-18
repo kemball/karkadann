@@ -33,7 +33,7 @@ CREATE TABLE `assemblies` (
   UNIQUE KEY `unique_file` (`gb_record`),
   KEY `genome_id` (`genome_id`),
   CONSTRAINT `assembly_genome` FOREIGN KEY (`genome_id`) REFERENCES `genomes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=205 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=266 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -60,7 +60,7 @@ CREATE TABLE `contigs` (
   PRIMARY KEY (`id`),
   KEY `assembly_id` (`assembly_id`),
   CONSTRAINT `contig_assembly` FOREIGN KEY (`assembly_id`) REFERENCES `assemblies` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2285 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=2689 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -90,7 +90,7 @@ CREATE TABLE `genes` (
   PRIMARY KEY (`id`),
   KEY `contig` (`contig`),
   CONSTRAINT `genes_contig` FOREIGN KEY (`contig`) REFERENCES `contigs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=89352 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=124251 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -115,7 +115,7 @@ CREATE TABLE `genomes` (
   `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=77144 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=77228 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -164,6 +164,7 @@ CREATE TABLE `hits` (
   `hmm` varchar(100) DEFAULT NULL,
   `gene` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_hmm` (`hmm`,`gene`),
   KEY `gene_map` (`gene`),
   CONSTRAINT `gene_map` FOREIGN KEY (`gene`) REFERENCES `genes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -235,4 +236,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-03-18 14:00:22
+-- Dump completed on 2016-03-18 15:36:34
