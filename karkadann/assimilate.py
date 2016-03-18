@@ -14,7 +14,7 @@ def _slug(text, aggressiveness=2):
 	if aggressiveness > 5:
 		return _slug(text, aggressiveness=3) + sample(ascii_lowercase, 5)
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
-	if m and aggressiveness == 1:
+	if m and aggressiveness == 1 and len(m.group())>3:
 		return m.group().strip()
 	words = text.split()
 	return "".join([word[:aggressiveness] for word in words[:aggressiveness]])
