@@ -333,15 +333,20 @@ class Gene(dbThing):
 		self._end = new_location.end
 		self._strand = new_location.strand
 
+	def hit_scores(self):
+		with get_cursor() as cur:
+			cur.execute("select score,hmm from hits where gene = %s;",(self.is_real(),))
+			return list(cur.fetchall())
+
 
 class Hit(dbThing):
-	# TODO: verify the hmm is real
 	def __init__(self, db_id=None, gene=None, score=None, hmm=None):
 		if db_id:
 			with get_cursor() as cur:
 				cur.execute("select id,score,gene,hmm from hits where id = %s;", (db_id,))
 				self._id, self._score, self._gene, self._hmm = cur.fetchone()
 		else:
+			assert(os.path.exists(hmm_location,hmm))
 			self._score = score
 			self._hmm = hmm
 			self._gene = gene.is_real()

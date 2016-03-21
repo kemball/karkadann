@@ -1,18 +1,17 @@
 import os
 import subprocess as sp
-import threading
+from threading import Thread
 from tempfile import NamedTemporaryFile as ntf
 from database import hmm_location, Hit
 from Bio import SearchIO, SeqIO, SeqRecord, Seq
 from Bio.Alphabet import IUPAC
-from database import Gene, Hit
 
 
 def _call_hmmer(hmm, inputproteins):
 	with ntf(prefix="/dev/shm/") as inputfasta:
 		with ntf(prefix="/dev/shm/") as hmmoutput:
 			SeqIO.write(inputproteins, inputfasta.name, 'fasta')
-			hmmfile = os.path.join(hmm_location, hmm)
+			hmmfile = os.path.join(hmm_location, hmm+'.hmm')
 			sp.call(['hmmsearch', '-o', hmmoutput.name, hmmfile, inputfasta.name])
 			QRS = SearchIO.parse(hmmoutput, format="hmmer3-text")
 			for qr in QRS:
@@ -36,23 +35,18 @@ import os
 
 def list_hmms():
 	fnames = os.listdir(hmm_location)
-	return [name for name in fnames if name.endswith('.hmm')]
+	return [name[:-4] for name in fnames if name.endswith('.hmm')]
 
 
 def scan_assembly(assembly):
 	# holy threading batman
-	# TODO thread this
 	contigs = assembly.contigs()
 	hmms = list_hmms()
+	skein = []
 	for c in contigs:
 		for hmm in hmms:
-			profile(c.genes(), hmm)
-
-
-if __name__ == "__main__":
-	testseq = """AIHKRPQSDVFIIDICPSLCGSTAMWMKCVSSHPTLLSTPDRHMPKMLALEVARGAGATTDHNKHKLKLLDNFTLQGVIYDTGHMFVG"""
-	input = SeqRecord.SeqRecord(Seq.Seq(testseq, IUPAC.protein), id="thefirstone")
-	input2 = SeqRecord.SeqRecord(
-		Seq.Seq("CVGKKNFANVVLTNIPDVGTSAGALFVPHRPPFAFKRNSTNVPGRLLIKRARQKRAFPTHQGVIYDTGHMFVG", IUPAC.protein),
-		id="thesecondone")
-	_call_hmmer("AfsA.hmm", [input, input2])
+			yarn = Thread(target=profile, args=(c.genes(), hmm), )
+			yarn.start()
+			skein.append(yarn)
+	for yarn in skein:
+		yarn.join()

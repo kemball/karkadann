@@ -20,7 +20,7 @@ class ProfileTest(ut.TestCase):
 			contigs = a.contigs()
 			for c in contigs:
 				genes = c.genes()
-				profile(genes, "AfsA.hmm")
+				profile(genes, "AfsA")
 			with get_cursor() as cur:
 				# there are guaranteed to be some.
 				# double checking that there's a hit from genes we just used is harder
@@ -35,8 +35,8 @@ class ProfileTest(ut.TestCase):
 
 
 class HmmTest(ut.TestCase):
-	#TODO
+	#TODO add more of these
 	def test_list_hmms(self):
 		self.assertTrue(list_hmms())
-		self.assertIn("AfsA.hmm",list_hmms())
+		self.assertIn("AfsA",list_hmms())
 
