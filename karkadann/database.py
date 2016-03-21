@@ -268,8 +268,8 @@ class Contig(dbThing):
 	@cursor_required
 	def genes(self, cur=None):
 		if self.is_real(cur=cur):
-			cur.execute("select id from genes where contig = %s;", (self._id,))
-			return (Gene(db_id=x[0]) for x in cur.fetchall())
+			cur.execute("select id,start from genes where contig = %s;", (self._id,))
+			return (Gene(db_id=x[0]) for x in sorted(cur.fetchall(), key=lambda x: float(x[1])))
 
 
 class Gene(dbThing):
@@ -335,7 +335,7 @@ class Gene(dbThing):
 
 	def hit_scores(self):
 		with get_cursor() as cur:
-			cur.execute("select score,hmm from hits where gene = %s;",(self.is_real(),))
+			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))
 			return list(cur.fetchall())
 
 
@@ -346,7 +346,7 @@ class Hit(dbThing):
 				cur.execute("select id,score,gene,hmm from hits where id = %s;", (db_id,))
 				self._id, self._score, self._gene, self._hmm = cur.fetchone()
 		else:
-			assert(os.path.exists(hmm_location,hmm))
+			assert (os.path.exists(hmm_location, hmm))
 			self._score = score
 			self._hmm = hmm
 			self._gene = gene.is_real()

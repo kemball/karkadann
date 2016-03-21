@@ -93,6 +93,10 @@ Runs all the hmms against the specified assembly. Totally unthreaded(for now).
 #### `profile(genes,hmm)`
 Takes an iterator of Gene objects and an hmm string 'AfsA.hmm' for example. Does the needful.
 
+##cluster_call.py
+#### `_classify(gene)`
+Returns the string classifying a gene into a seed for a gene cluster. You almost certainly shouldn't need to call this.
+
 
 ##assimilate.py
 
@@ -100,7 +104,9 @@ Tools for importing genbank files. Deciding on useful names, validating accessio
 
 ####`assimilate_from_ncbi(ncbifile)`
 
-Does exactly what it sounds like. Takes just over three minutes for a 10Mb genome, counting time taken for prodigal, merging the features together, writing all the stuff to the database. Could take less time, but prodigal takes 20-40 seconds no matter what. Picks a genome name from the description of the genbank file. Reads the assembly accession number off DBLINK. Could cross-reference against Biosample if we wanted that way.
+Does exactly what it sounds like. Takes just over three minutes for a 10Mb genome, counting time taken for prodigal, merging the features together, writing all the stuff to the database. Could take less time, but prodigal takes 20-40 seconds no matter what. Picks a genome name from the description of the genbank file. Reads the assembly accession number off DBLINK. Could cross-reference against Biosample in the future if that is required or interesting.
+
+Should write another helper that slurps data out of the gcf database doroghazi.
 
 ####`make_standard(records)`
 

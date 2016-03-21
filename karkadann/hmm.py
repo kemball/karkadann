@@ -11,7 +11,7 @@ def _call_hmmer(hmm, inputproteins):
 	with ntf(prefix="/dev/shm/") as inputfasta:
 		with ntf(prefix="/dev/shm/") as hmmoutput:
 			SeqIO.write(inputproteins, inputfasta.name, 'fasta')
-			hmmfile = os.path.join(hmm_location, hmm+'.hmm')
+			hmmfile = os.path.join(hmm_location, hmm + '.hmm')
 			sp.call(['hmmsearch', '-o', hmmoutput.name, hmmfile, inputfasta.name])
 			QRS = SearchIO.parse(hmmoutput, format="hmmer3-text")
 			for qr in QRS:
@@ -20,8 +20,8 @@ def _call_hmmer(hmm, inputproteins):
 
 
 def profile(genes, hmm):
-	def aa(genes):
-		for gene in genes:
+	def aa(geneset):
+		for gene in geneset:
 			yield SeqRecord.SeqRecord(Seq.Seq(gene.translation, IUPAC.protein), id=str(gene.is_real()))
 
 	for gene_id, score in _call_hmmer(hmm, aa(genes)):
@@ -45,6 +45,7 @@ def scan_assembly(assembly):
 	skein = []
 	for c in contigs:
 		for hmm in hmms:
+
 			yarn = Thread(target=profile, args=(c.genes(), hmm), )
 			yarn.start()
 			skein.append(yarn)

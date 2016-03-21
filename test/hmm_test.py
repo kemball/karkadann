@@ -1,5 +1,5 @@
 from karkadann.hmm import *
-from karkadann.database import get_cursor,data_location
+from karkadann.database import get_cursor, data_location
 from karkadann.assimilate import assimilate_from_ncbi
 import unittest as ut
 
@@ -29,14 +29,12 @@ class ProfileTest(ut.TestCase):
 				for res in cur.fetchone():
 					self.assertIsNotNone(res)
 
-
 	def test_scan_assembly(self):
 		scan_assembly(next(ProfileTest.ng.assemblies()))
 
 
 class HmmTest(ut.TestCase):
-	#TODO add more of these
+	# TODO add more of these
 	def test_list_hmms(self):
 		self.assertTrue(list_hmms())
-		self.assertIn("AfsA",list_hmms())
-
+		self.assertIn("AfsA", list_hmms())

@@ -14,7 +14,7 @@ def _slug(text, aggressiveness=2):
 	if aggressiveness > 5:
 		return _slug(text, aggressiveness=3) + sample(ascii_lowercase, 5)
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
-	if m and aggressiveness == 1 and len(m.group())>3:
+	if m and aggressiveness == 1 and len(m.group()) > 3:
 		return m.group().strip()
 	words = text.split()
 	return "".join([word[:aggressiveness] for word in words[:aggressiveness]])
@@ -49,7 +49,7 @@ def assimilate_from_ncbi(ncbifile):
 	ncbirecord = list(SeqIO.parse(ncbifile, 'genbank'))
 	# can thread here, but rule #1 of optimization
 	make_standard(ncbirecord)
-	reannotated_record = annotate(ncbirecord,preserve_anno=True)
+	reannotated_record = annotate(ncbirecord, preserve_anno=True)
 	agg = 1
 	desc = reannotated_record[0].description
 	genome_name = _slug(desc, agg)
@@ -58,7 +58,7 @@ def assimilate_from_ncbi(ncbifile):
 		try:
 			newgenome.save()
 		except IntegrityError:
-			print "failed to save genome with name %s trying something else"%genome_name
+			print "failed to save genome with name %s trying something else" % genome_name
 			agg += 1
 			newgenome = Genome(genome_name=_slug(desc, agg))
 
@@ -84,16 +84,14 @@ def assimilate_from_ncbi(ncbifile):
 					newgene = Gene(translation=feat.qualifiers['translation'][0],
 					               contig=newcontig,
 					               start=feat.location.start,
-						           end=feat.location.end,
-						           strand=feat.location.strand,
-						           accession=feat.qualifiers.get("protein_id", [None])[0])
+					               end=feat.location.end,
+					               strand=feat.location.strand,
+					               accession=feat.qualifiers.get("protein_id", [None])[0])
 					newgene.save()
 	except:
 		newgenome.delete()
 		raise
 	return newgenome
-
-
 
 
 if __name__ == "__main__":
