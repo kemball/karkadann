@@ -70,7 +70,7 @@ class GenomeTest(ut.TestCase):
 		newgenome.save()
 		try:
 			newgenome.binomial("Heffalump jabberwocky subpsp vorpatius")
-			self.assertEqual(newgenome.binomial(),"Heffalump jabberwocky subpsp vorpatius")
+			self.assertEqual(newgenome.binomial() , "Heffalump jabberwocky subpsp vorpatius")
 		finally:
 			newgenome.delete()
 		with get_cursor() as cur:
@@ -78,20 +78,17 @@ class GenomeTest(ut.TestCase):
 			self.assertEqual(cur.fetchone(),None)
 
 	def test_assemblies(self):
-		newgenome = Genome(genome_name="snickersnack")
+		newgenome = Genome(genome_name="testgenome")
 		newgenome.save()
 		try:
-			self.assertFalse(newgenome.assemblies())
+			self.assertRaises(StopIteration,next,newgenome.assemblies())
 		finally:
 			newgenome.delete()
 
 
-
-
-
 class AssemblyTest(ut.TestCase):
-	#this screams for setup and teardown methods
-	#and yet here we are
+	# this screams for setup and teardown methods
+	# and yet here we are
 	records = SeqIO.parse(os.path.join(data_location,'test/testassem.gb'),'genbank')
 	records = list(records)
 
@@ -117,7 +114,7 @@ class AssemblyTest(ut.TestCase):
 			newassem = Assembly(self.records,new_genome)
 			newassem.save()
 			try:
-				assembly = new_genome.assemblies()[0]
+				assembly = next(new_genome.assemblies())
 				self.assertEqual(assembly.is_real(),newassem.is_real())
 				
 			finally:

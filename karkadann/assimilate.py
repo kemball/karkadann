@@ -49,7 +49,7 @@ def assimilate_from_ncbi(ncbifile):
 	ncbirecord = list(SeqIO.parse(ncbifile, 'genbank'))
 	# can thread here, but rule #1 of optimization
 	make_standard(ncbirecord)
-	reannotated_record = annotate(ncbirecord)
+	reannotated_record = annotate(ncbirecord,preserve_anno=True)
 	agg = 1
 	desc = reannotated_record[0].description
 	genome_name = _slug(desc, agg)
@@ -81,7 +81,7 @@ def assimilate_from_ncbi(ncbifile):
 			from database import get_cursor
 			for feat in record.features:
 				if feat.type == "CDS":
-					newgene = Gene(translation=feat.qualifiers['translation'],
+					newgene = Gene(translation=feat.qualifiers['translation'][0],
 					               contig=newcontig,
 					               start=feat.location.start,
 						           end=feat.location.end,

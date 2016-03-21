@@ -151,7 +151,7 @@ class Genome(dbThing):
 	def assemblies(self, cur=None):
 		if self.is_real(cur=cur):
 			cur.execute("select id from assemblies where genome_id = %s;", (self._id,))
-			return [Assembly(db_id=x) for (x,) in cur.fetchall()]
+			return (Assembly(db_id=x) for (x,) in cur.fetchall())
 
 
 class Assembly(dbThing):
@@ -166,7 +166,7 @@ class Assembly(dbThing):
 			self._genome_id = genome.is_real()
 			self._fastq = fastq
 			self._assembled = assembled
-			self._acc = accession
+			self._acc = accession or ""
 
 	@classmethod
 	@cursor_required
@@ -210,7 +210,7 @@ class Assembly(dbThing):
 
 		if self.is_real(cur=cur):
 			cur.execute("select id from contigs where assembly_id=%s;", (self._id,))
-			return (Contig(db_id=x[0], cur=cur) for x in cur.fetchall())
+			return (Contig(db_id=x[0]) for x in cur.fetchall())
 
 	@staticmethod
 	def save_record(record, salt=None):
@@ -235,7 +235,7 @@ class Contig(dbThing):
 			else:
 				self._seq = seq
 				self._assembly_id = assembly.is_real(cur=cur)
-				self._acc = accession
+				self._acc = accession or ""
 
 	@cursor_required
 	def save(self, cur=None):
@@ -291,7 +291,7 @@ class Gene(dbThing):
 			self._start = start
 			self._end = end
 			self._strand = strand
-			self._acc = accession
+			self._acc = accession or ""
 
 	@cursor_required
 	def save(self, cur=None):

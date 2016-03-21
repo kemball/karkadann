@@ -41,7 +41,7 @@ def parse_prodigal(prodigal_record):
 			strand = int(strand)
 			location = SeqFeature.FeatureLocation(start,end,strand)
 			sequence = str(rec.seq)
-			qualifiers = {'translation':sequence,'prodigal_id':prod_id}
+			qualifiers = {'translation':[sequence],'prodigal_id':prod_id}
 			# multiple features go on the same record. This returns the name to keep track of what goes where.
 			feature = SeqFeature.SeqFeature(location=location,
 											type="CDS",
@@ -115,8 +115,8 @@ def merge_features(records,gene_calls,preserve_anno=True):
 
 def annotate(record,preserve_anno = False):
 	record = deepcopy(list(record))
-	#getting problems with annotated lists squashing each other's features
-	#could parallelize but won't help much
+	# getting problems with annotated lists squashing each other's features
+	# could parallelize but won't help much
 	with ntf(prefix='/dev/shm/',delete=True,suffix=".fna") as fastafile:
 		# prodigal can handle the genbank files
 		# but in order to generate pseudofastas with accessions instead of species names

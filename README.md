@@ -26,7 +26,7 @@ Returns a prodigated gbrecord. If preserve_anno is True, it'll only add prodigal
 
 Contains all of the database handling things, also defines/checks the data directory from config.
 
-#####`get_cursor()`
+####`get_cursor()`
 
 Returns a cursor the database. It's thread safe, I promise. Use like so:
 
@@ -36,7 +36,7 @@ Returns a cursor the database. It's thread safe, I promise. Use like so:
 
 If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. Don't be afraid to open a bunch, though, they're cheap. <sup><sub>_they're not, but they will be_</sub></sup>
 
-#####`Genome(db_id,genome_name)`
+####`Genome(db_id,genome_name)`
 
 Creates a new Genome object. If created with a db_id, populates itself from the database. If created with a genome_name, represents an unsaved Genome. 
 
@@ -68,7 +68,7 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.is_real()` Checks if the Contig has been saved to the database, and if so, returns its id.
 * `.seq()` Returns the sequence of the contig.
 * `.acc()` Returns the accession number for the contig.
-* `.genes()` Returns a list of the Genes in the contig.
+* `.genes()` Returns a generator of the Genes in the contig.
 
 ####`Gene(db_id)` or `Gene(translation,contig,start,end,strand,accession)`
 
@@ -89,7 +89,7 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 #### `list_hmms()`
  Lists all the hmms available in the data directory karkadann maintains.
 #### `scan_assembly(assembly)`
-Runs all the hmms against the specified assembly. Totally unthreaded.
+Runs all the hmms against the specified assembly. Totally unthreaded(for now).
 #### `profile(genes,hmm)`
 Takes an iterator of Gene objects and an hmm string 'AfsA.hmm' for example. Does the needful.
 

@@ -25,19 +25,31 @@ class AssimilateTest(ut.TestCase):
 		from time import time
 		before = time()
 		ng = assimilate_from_ncbi(self.testgbfile)
+		assem = next(ng.assemblies())
+		from karkadann.database import get_cursor
+
 		now = time()
 		print "running assimilate took %s seconds" % str(now-before)
+		with get_cursor() as cur:
+			cur.execute("select accession from assemblies where id = %s;",(assem.is_real()))
+			self.assertEqual(cur.fetchone()[0],"GCF_000576425.1")
+		with get_cursor() as cur:
+			cur.execute("select accession from contigs where accession=%s;",("NZ_KK070022.1",))
+			self.assertIsNotNone(cur.fetchone())
+		with get_cursor() as cur:
+			cur.execute("select accession from genes where accession=%s;",("WP_038374786.1",))
+			self.assertIsNotNone(cur.fetchone())
 		ng.delete()
-		print "running delete took %s seconds"% str(time()-now)
+		print "running delete took %s seconds" % str(time()-now)
 
 	def test_slug_twins(self):
 		# when they have very similar description fields and have trouble making unique genome names.
 		ng = assimilate_from_ncbi(self.testgbfile)
 		ng2 = assimilate_from_ncbi(self.testgbfile)
 		self.assertNotEqual(ng.is_real(),ng2.is_real())
+		self.assertNotEqual(ng._name,ng2._name)
 		ng.delete()
 		ng2.delete()
-
 
 
 if __name__ == "__main__":

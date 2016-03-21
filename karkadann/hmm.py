@@ -23,7 +23,7 @@ def _call_hmmer(hmm, inputproteins):
 def profile(genes, hmm):
 	def aa(genes):
 		for gene in genes:
-			yield SeqRecord.SeqRecord(Seq.Seq(gene.translation, IUPAC.protein), id=gene.is_real())
+			yield SeqRecord.SeqRecord(Seq.Seq(gene.translation, IUPAC.protein), id=str(gene.is_real()))
 
 	for gene_id, score in _call_hmmer(hmm, aa(genes)):
 		new_hit = Hit(gene=gene_id, score=score, hmm=hmm)
