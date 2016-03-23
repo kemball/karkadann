@@ -12,7 +12,7 @@ def _slug(text, aggressiveness=2):
 	# check for allcaps+numbers words?
 	# those are usually strain names...
 	if aggressiveness > 5:
-		return _slug(text, aggressiveness=3) + sample(ascii_lowercase, 5)
+		return _slug(text, aggressiveness=3) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
 	if m and aggressiveness == 1 and len(m.group()) > 3:
 		return m.group().strip()
@@ -58,7 +58,7 @@ def assimilate_from_ncbi(ncbifile):
 		try:
 			newgenome.save()
 		except IntegrityError:
-			print "failed to save genome with name %s trying something else" % genome_name
+			print "failed to save genome with name %s trying something else" % newgenome._name
 			agg += 1
 			newgenome = Genome(genome_name=_slug(desc, agg))
 
@@ -75,19 +75,29 @@ def assimilate_from_ncbi(ncbifile):
 		newassem = Assembly(record=reannotated_record, genome=newgenome, accession=assem_acc)
 		# I'd wrap this is a try/except but what could I even do? If this fails Here There Be Problems
 		newassem.save()
-		for record in reannotated_record:
+
+		def save_record(record):
 			newcontig = Contig(seq=str(record.seq), assembly=newassem, accession=record.id)
 			newcontig.save()
-			from database import get_cursor
 			for feat in record.features:
 				if feat.type == "CDS":
 					newgene = Gene(translation=feat.qualifiers['translation'][0],
 					               contig=newcontig,
-					               start=feat.location.start,
-					               end=feat.location.end,
-					               strand=feat.location.strand,
+					               start=int(feat.location.start),
+					               end=int(feat.location.end),
+					               strand=int(feat.location.strand),
 					               accession=feat.qualifiers.get("protein_id", [None])[0])
 					newgene.save()
+		skein = []
+		from threading import Thread
+		print "beginning to thread record"
+		for record in reannotated_record:
+			yarn = Thread(target=save_record, args=(record,))
+			yarn.start()
+			skein.append(yarn)
+		for yarn in skein:
+			yarn.join()
+		print "finished record"
 	except:
 		newgenome.delete()
 		raise

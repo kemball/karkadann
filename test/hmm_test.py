@@ -2,6 +2,7 @@ from karkadann.hmm import *
 from karkadann.database import get_cursor, data_location
 from karkadann.assimilate import assimilate_from_ncbi
 import unittest as ut
+from time import time
 
 
 class ProfileTest(ut.TestCase):
@@ -15,12 +16,13 @@ class ProfileTest(ut.TestCase):
 		cls.ng.delete()
 
 	def test_run(self):
+		print "testing profile"
 		assems = ProfileTest.ng.assemblies()
 		for a in assems:
 			contigs = a.contigs()
 			for c in contigs:
 				genes = c.genes()
-				profile(genes, "AfsA")
+				profile(genes, ["AfsA"])
 			with get_cursor() as cur:
 				# there are guaranteed to be some.
 				# double checking that there's a hit from genes we just used is harder
@@ -30,11 +32,24 @@ class ProfileTest(ut.TestCase):
 					self.assertIsNotNone(res)
 
 	def test_scan_assembly(self):
+		print "testing scan_assembly"
+		before = time()
+		assem = next(ProfileTest.ng.assemblies())
+		for contig in assem.contigs():
+			for gene in contig.genes():
+				for h in Hit.fetch(gene):
+					h.delete()
+					self.assertFalse(h.is_real())
+		now = time()
+		print "wiped hits, took %s seconds" %(now-before)
 		scan_assembly(next(ProfileTest.ng.assemblies()))
+		print "scanned assembly, took %s seconds" % (time()-now)
 
 
 class HmmTest(ut.TestCase):
 	# TODO add more of these
 	def test_list_hmms(self):
+		print "testing list_hmms"
 		self.assertTrue(list_hmms())
 		self.assertIn("AfsA", list_hmms())
+		print "there are %s hmms" % len(list_hmms())

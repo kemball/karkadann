@@ -1,4 +1,4 @@
-from database import Hit,Gene
+from database import Hit,Gene,Cluster
 from collections import defaultdict
 
 def _classify(gene):
@@ -58,10 +58,10 @@ def call_clusters(contig):
 	genes = list(contig.genes())
 	classifications = list(map(_classify, genes))
 	clusters = defaultdict(list)
-	for i,gc in enumerate(zip(genes, classifications)):
-		g,c=gc
+	for i, gc in enumerate(zip(genes, classifications)):
+		g, c = gc
 		if c:
-			clusters[c].append([genes[i-6:i+7]])
+			clusters[c].append(genes[i-6:i+7])
 	for kind in clusters.keys():
 		for i, listed in enumerate(sorted(clusters[kind], key=lambda x: x[0].location.start)):
 			if not len(listed) or listed == clusters[kind][-1]:
@@ -70,6 +70,11 @@ def call_clusters(contig):
 				# we have overlap. do something?
 				clusters[kind][i]=list(set(clusters[kind][i]) | set(clusters[kind[i+1]]))
 				clusters[kind][i+1] = []
+	for kind in clusters.keys():
+		if len(clusters[kind]):
+			for genes in clusters[kind]:
+				new_cluster = Cluster(gene_list=genes, classification=kind)
+				new_cluster.save()
 	return [clusters[k] for k in clusters.keys() if len(clusters[k])]
 
 

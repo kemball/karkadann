@@ -34,7 +34,6 @@ if not os.access(hmm_location, os.R_OK):
 
 threadLocal = threading.local()
 
-threadLocal.cursorcount = 0
 
 
 @contextmanager
@@ -56,7 +55,6 @@ def get_cursor():
 	else:
 		conn = mysql.connect(host=host, user=username, passwd=password, db=dbname)
 		threadLocal.conn = conn
-		print "made a connection!"
 	curse = conn.cursor()
 	try:
 		yield curse
@@ -268,8 +266,8 @@ class Contig(dbThing):
 	@cursor_required
 	def genes(self, cur=None):
 		if self.is_real(cur=cur):
-			cur.execute("select id,start from genes where contig = %s;", (self._id,))
-			return (Gene(db_id=x[0]) for x in sorted(cur.fetchall(), key=lambda x: float(x[1])))
+			cur.execute("select id from genes where contig = %s order by start;", (self._id,))
+			return (Gene(db_id=x) for (x,) in cur.fetchall())
 
 
 class Gene(dbThing):
@@ -282,8 +280,11 @@ class Gene(dbThing):
 	             accession=None):
 		if db_id:
 			with get_cursor() as cur:
-				cur.execute("select * from genes where id=%s;", (db_id,))
+				cur.execute("select id,translation,contig,start,end,strand,accession from genes where id=%s;", (db_id,))
 				self._id, self._translation, self._contig, self._start, self._end, self._strand, self._acc = cur.fetchone()
+				self._start = int(self._start)
+				self._end = int(self._end)
+				self._strand = int(self._strand)
 		else:
 			self._id = None
 			self._translation = translation
@@ -298,7 +299,7 @@ class Gene(dbThing):
 		if not self._id:
 			cur.execute("insert into genes (translation,start,end,strand,contig,accession) values \
 			                            (%s,%s,%s,%s,%s,%s);",
-			            (self._translation, self._start, self._end, str(self._strand), self._contig, self._acc))
+			            (self._translation, self._start, self._end, self._strand, self._contig, self._acc))
 			self._id = cur.lastrowid
 
 	@cursor_required
@@ -325,7 +326,7 @@ class Gene(dbThing):
 
 	@property
 	def location(self):
-		return SeqFeature.FeatureLocation(self._start, self._end, strand=int(self._strand))
+		return SeqFeature.FeatureLocation(int(self._start), int(self._end), strand=int(self._strand))
 
 	@location.setter
 	def location(self, new_location):
@@ -346,10 +347,16 @@ class Hit(dbThing):
 				cur.execute("select id,score,gene,hmm from hits where id = %s;", (db_id,))
 				self._id, self._score, self._gene, self._hmm = cur.fetchone()
 		else:
-			assert (os.path.exists(hmm_location, hmm))
 			self._score = score
 			self._hmm = hmm
 			self._gene = gene.is_real()
+			self._id = None
+
+	@classmethod
+	def fetch(cls, gene):
+		with get_cursor() as cur:
+			cur.execute("select id from hits where gene = %s;",(gene.is_real(),))
+			return [Hit(db_id=x) for x in cur.fetchall()]
 
 	@cursor_required
 	def delete(self, cur=None):
@@ -357,16 +364,63 @@ class Hit(dbThing):
 
 	@cursor_required
 	def save(self, cur=None):
-		cur.execute("insert into hits (score,gene,hmm) values (%s,%s,%s)", (self._score, self._gene, self._hmm))
+		if not self.is_real():
+			cur.execute("insert into hits (score,gene,hmm) values (%s,%s,%s);", (self._score, self._gene, self._hmm))
+			self._id = cur.lastrowid
 
 	@cursor_required
 	def is_real(self, cur=None):
 		if self._id:
 			cur.execute("select id from hits where id = %s;", (self._id,))
 			for result in cur:
-				return result
+				return result[0]
 			return None
 
 	@property
 	def score(self):
 		return self._score
+
+
+class Cluster(dbThing):
+
+	def __init__(self,db_id=None, gene_list=None, classification=None):
+		if db_id:
+			self.gene_list = []
+			with get_cursor() as cur:
+				cur.execute("select gene,classification from clusters where id = %s;", (db_id,))
+				for g,c in cur.fetchall():
+					self.gene_list.append(Gene(db_id=g))
+					if c:
+						self._kind = c
+				self._id = db_id
+		else:
+			self.gene_list = gene_list
+			self._id = None
+			self._kind = classification
+
+
+	@cursor_required
+	def is_real(self, cur=None):
+		if self._id:
+			cur.execute("select id from clusters where id = %s;", (self._id,))
+			for r in cur.fetchall():
+				return self._id
+		return None
+
+	@cursor_required
+	def save(self, cur=None):
+		if not self.is_real():
+			cur.execute("select count(distinct id) from clusters where classification=%s;", (self._kind,))
+			# blah blah race condition blah blah
+			self._id = self._kind + 'q' + str(int(cur.fetchone()[0])+1)
+			cur.execute("select count(*) from clusters where id=%s;", (self._id,))
+			assert(cur.fetchone()[0] == 0)
+			for gene in self.gene_list:
+				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
+				                (self._id, self._kind, gene.is_real()))
+
+	@cursor_required
+	def delete(self, cur=None):
+		if self.is_real():
+			cur.execute("delete from clusters where id = %s;", (self._id,))
+

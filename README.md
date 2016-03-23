@@ -85,6 +85,13 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.is_real()` Checks if the hit has been saved, and if so returns its id.
 * `.score` Pseudoproperty. Returns the bitscore of the hit.
 
+####`Cluster(db_id) or Cluster(gene_list,classification)`
+Reads a cluster from the database or makes a new one from a classification and a gene_list. The id isn't numeric but a string based on its classification and the number of existing clusters.
+
+* `.save()` Saves the cluster to the database.
+* `.delete()` Deletes the cluster from the database.
+* `.is_real()` Checks if the cluster has been saved, and if so returns its id.
+
 ##hmm.py
 #### `list_hmms()`
  Lists all the hmms available in the data directory karkadann maintains.
@@ -97,6 +104,8 @@ Takes an iterator of Gene objects and an hmm string 'AfsA.hmm' for example. Does
 #### `_classify(gene)`
 Returns the string classifying a gene into a seed for a gene cluster. You almost certainly shouldn't need to call this.
 
+#### `call_clusters(contig)`
+Calls all the gene clusters in a given contig and puts them into the database.
 
 ##assimilate.py
 
@@ -104,9 +113,9 @@ Tools for importing genbank files. Deciding on useful names, validating accessio
 
 ####`assimilate_from_ncbi(ncbifile)`
 
-Does exactly what it sounds like. Takes just over three minutes for a 10Mb genome, counting time taken for prodigal, merging the features together, writing all the stuff to the database. Could take less time, but prodigal takes 20-40 seconds no matter what. Picks a genome name from the description of the genbank file. Reads the assembly accession number off DBLINK. Could cross-reference against Biosample in the future if that is required or interesting.
+Does exactly what it sounds like. Takes just one minute for a 10Mb genome, counting time taken for prodigal, merging the features together, writing all the stuff to the database. Prodigal takes 20-40 seconds no matter what. Picks a genome name from the description of the genbank file. Reads the assembly accession number off DBLINK. Could cross-reference against Biosample in the future if that is required or interesting.
 
-Should write another helper that slurps data out of the gcf database doroghazi.
+Will write another helper that slurps data out of the gcf database.
 
 ####`make_standard(records)`
 

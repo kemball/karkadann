@@ -1,10 +1,9 @@
-from context import karkadann
-from karkadann.database import *
 import unittest as ut
+
+from karkadann.database import *
 
 
 class FileTest(ut.TestCase):
-	import os
 	def test_data_location(self):
 		self.assertTrue(os.access(data_location, os.R_OK))
 
@@ -31,7 +30,7 @@ class GenomeTest(ut.TestCase):
 	def test_make_insane_genome(self):
 
 		with self.assertRaises(Exception):
-			foo = Genome(db_id=42)
+			Genome(db_id=42)
 
 	def test_fetch_genome(self):
 		newgenome = Genome(genome_name="testgenome")
@@ -274,7 +273,7 @@ class GeneTest(ut.TestCase):
 		                 contig=self.test_contig,
 		                 start=0,
 		                 end=2,
-		                 strand="-1",
+		                 strand=-1,
 		                 accession="WP_1337.1")
 		test_gene.save()
 		try:
@@ -284,6 +283,76 @@ class GeneTest(ut.TestCase):
 			self.assertEqual(test_gene.translation, "MICHAELBIOLOGIST")
 		finally:
 			test_gene.delete()
+
+	def test_load_gene(self):
+		test_gene = Gene(translation="MICHAELBIOLOGIST",
+		                 contig=self.test_contig,
+		                 start=0,
+		                 end=2,
+		                 strand=-1,
+		                 accession="WP_1337.1")
+		test_gene.save()
+		other_gene = Gene(db_id=test_gene.is_real())
+		try:
+			self.assertEqual(test_gene.is_real(), other_gene.is_real())
+			self.assertEqual(test_gene.__dict__, other_gene.__dict__)
+		finally:
+			test_gene.delete()
+
+
+class HitTest(ut.TestCase):
+
+	from karkadann.assimilate import assimilate_from_ncbi
+
+	testgbfile = os.path.join(data_location, 'test/testassem.gb')
+	ng = assimilate_from_ncbi(testgbfile)
+	assem = next(ng.assemblies())
+	contig = next(assem.contigs())
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.ng.delete()
+
+	def test_make_hit(self):
+		gene = next(self.contig.genes())
+		newhit = Hit(gene=gene, score=5, hmm="test")
+		try:
+			newhit.save()
+			self.assertTrue(newhit.is_real())
+			self.assertEqual(5, newhit.score)
+			otherhit = Hit(db_id=newhit.is_real())
+			self.assertEqual(otherhit.score, newhit.score)
+			otherhit.save()
+			self.assertEqual(otherhit.is_real(), newhit.is_real())
+		finally:
+			newhit.delete()
+
+
+class ClusterTest(ut.TestCase):
+	# TODO
+
+	from assimilate import assimilate_from_ncbi
+	testgbfile = os.path.join(data_location, 'test/testassem.gb')
+	ng = assimilate_from_ncbi(testgbfile)
+	assem = next(ng.assemblies())
+	contig = next(assem.contigs())
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.ng.delete()
+
+	def test_make_cluster(self):
+		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="test")
+		try:
+			newcluster.save()
+			self.assertTrue(newcluster.is_real())
+			othercluster = Cluster(db_id=newcluster.is_real())
+			self.assertTrue(othercluster.is_real())
+			self.assertEqual(newcluster._kind, othercluster._kind)
+			self.assertEqual(newcluster._kind, 'test')
+		finally:
+			newcluster.delete()
+		self.assertFalse(newcluster.is_real())
 
 
 if __name__ == "__main__":
