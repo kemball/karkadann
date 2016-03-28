@@ -41,11 +41,14 @@ def profile(genes, hmms):
 
 	protset = list(aa(list(genes)))
 	skein = []
+
 	def threadlet(hmm,protset):
+		hit_list = []
 		for gene_id, score in _call_hmmer(hmm, protset):
 			new_hit = Hit(gene=Gene(db_id=int(gene_id)), score=score, hmm=hmm)
 			if score > 0:
-				new_hit.save()
+				hit_list.append(new_hit)
+		Hit.save_many(hit_list)
 	for hmm in hmms:
 		yarn = Thread(target=threadlet,args=(hmm,protset))
 		yarn.start()

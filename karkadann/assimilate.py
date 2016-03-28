@@ -79,6 +79,7 @@ def assimilate_from_ncbi(ncbifile):
 		def save_record(record):
 			newcontig = Contig(seq=str(record.seq), assembly=newassem, accession=record.id)
 			newcontig.save()
+			gene_iterable = []
 			for feat in record.features:
 				if feat.type == "CDS":
 					newgene = Gene(translation=feat.qualifiers['translation'][0],
@@ -87,7 +88,8 @@ def assimilate_from_ncbi(ncbifile):
 					               end=int(feat.location.end),
 					               strand=int(feat.location.strand),
 					               accession=feat.qualifiers.get("protein_id", [None])[0])
-					newgene.save()
+					gene_iterable.append(newgene)
+			Gene.save_many(gene_iterable)
 		skein = []
 		from threading import Thread
 		print "beginning to thread record"

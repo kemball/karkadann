@@ -9,9 +9,12 @@ class ClassifyTest(ut.TestCase):
 	def setUpClass(cls):
 		from assimilate import assimilate_from_ncbi
 		from hmm import scan_assembly
+		print "assimilating for classification testing"
+		before = time()
 		cls.ng = assimilate_from_ncbi('../test/testassem.gb')
 		cls.assem = next(cls.ng.assemblies())
 		cls.contigs = list(cls.assem.contigs())
+		print "assimilation took %d seconds" % (time()-before)
 		before = time()
 		scan_assembly(cls.assem)
 		print "scanning an assembly takes %s seconds" % (time()-before)

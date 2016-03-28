@@ -252,6 +252,7 @@ class ContigTest(ut.TestCase):
 
 
 class GeneTest(ut.TestCase):
+	#TODO save_many test
 	records = SeqIO.parse(os.path.join(data_location, 'test/testassem.gb'), 'genbank')
 	records = list(records)
 
@@ -301,6 +302,7 @@ class GeneTest(ut.TestCase):
 
 
 class HitTest(ut.TestCase):
+	#TODO save_many test
 
 	from karkadann.assimilate import assimilate_from_ncbi
 

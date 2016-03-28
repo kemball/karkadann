@@ -302,6 +302,13 @@ class Gene(dbThing):
 			            (self._translation, self._start, self._end, self._strand, self._contig, self._acc))
 			self._id = cur.lastrowid
 
+	@staticmethod
+	def save_many(genes_iterable):
+		with get_cursor() as cur:
+			tuples = [(x._translation,x._start,x._end,x._strand,x._contig,x._acc) for x in genes_iterable]
+			cur.executemany("insert into genes (translation, start, end, strand, contig, accession) values (%s,%s,%s,%s,%s,%s);",
+			                tuples)
+
 	@cursor_required
 	def is_real(self, cur=None):
 		if self._id:
@@ -367,6 +374,12 @@ class Hit(dbThing):
 		if not self.is_real():
 			cur.execute("insert into hits (score,gene,hmm) values (%s,%s,%s);", (self._score, self._gene, self._hmm))
 			self._id = cur.lastrowid
+
+	@staticmethod
+	def save_many(hits_iterable):
+		with get_cursor() as cur:
+			tuples = [(x._score,x._gene,x._hmm) for x in hits_iterable]
+			cur.executemany("insert into hits (score,gene,hmm) values (%s,%s,%s);",tuples)
 
 	@cursor_required
 	def is_real(self, cur=None):
