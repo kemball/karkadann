@@ -7,11 +7,12 @@ from time import time
 class ClassifyTest(ut.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		from assimilate import assimilate_from_ncbi
-		from hmm import scan_assembly
+		from karkadann.assimilate import assimilate_from_ncbi
+		from karkadann.hmm import scan_assembly
+		from karkadann.database import data_location
 		print "assimilating for classification testing"
 		before = time()
-		cls.ng = assimilate_from_ncbi('../test/testassem.gb')
+		cls.ng = assimilate_from_ncbi(data_location+'/'+'test/testassem.gb')
 		cls.assem = next(cls.ng.assemblies())
 		cls.contigs = list(cls.assem.contigs())
 		print "assimilation took %d seconds" % (time()-before)
