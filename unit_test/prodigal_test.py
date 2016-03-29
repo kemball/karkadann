@@ -167,7 +167,7 @@ if __name__ == "__main__":
 	testgb = os.path.join(data_location, "test/testassem.gb")
 	testrec = SeqIO.parse(testgb, 'genbank')
 	betteranno = annotate(testrec)
-	SeqIO.write(betteranno, 'test.gb', 'genbank')
+	SeqIO.write(betteranno, 'test1.gb', 'genbank')
 	testrec = SeqIO.parse(testgb, 'genbank')
 	preserved_anno = annotate(testrec, preserve_anno=True)
 	SeqIO.write(preserved_anno, 'test2.gb', 'genbank')

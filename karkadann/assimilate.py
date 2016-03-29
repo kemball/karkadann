@@ -76,7 +76,7 @@ def assimilate_from_ncbi(ncbifile):
 		# I'd wrap this is a try/except but what could I even do? If this fails Here There Be Problems
 		newassem.save()
 
-		def save_record(record):
+		for record in reannotated_record:
 			newcontig = Contig(seq=str(record.seq), assembly=newassem, accession=record.id)
 			newcontig.save()
 			gene_iterable = []
@@ -89,17 +89,8 @@ def assimilate_from_ncbi(ncbifile):
 					               strand=int(feat.location.strand),
 					               accession=feat.qualifiers.get("protein_id", [None])[0])
 					gene_iterable.append(newgene)
-			Gene.save_many(gene_iterable)
-		skein = []
-		from threading import Thread
-		print "beginning to thread record"
-		for record in reannotated_record:
-			yarn = Thread(target=save_record, args=(record,))
-			yarn.start()
-			skein.append(yarn)
-		for yarn in skein:
-			yarn.join()
-		print "finished record"
+			Gene._save_many(gene_iterable)
+
 	except:
 		newgenome.delete()
 		raise

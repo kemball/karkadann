@@ -92,7 +92,7 @@ class AssemblyTest(ut.TestCase):
 	records = list(records)
 
 	def test_make_assembly(self):
-		new_genome = Genome(genome_name='test')
+		new_genome = Genome(genome_name='test_genome')
 		new_genome.save()
 		try:
 			newassem = Assembly(self.records, new_genome)
@@ -107,7 +107,7 @@ class AssemblyTest(ut.TestCase):
 			new_genome.delete()
 
 	def test_parent_watches(self):
-		new_genome = Genome(genome_name='test')
+		new_genome = Genome(genome_name='test_genome')
 		new_genome.save()
 		try:
 			newassem = Assembly(self.records, new_genome)
@@ -252,7 +252,7 @@ class ContigTest(ut.TestCase):
 
 
 class GeneTest(ut.TestCase):
-	#TODO save_many test
+	#TODO save_many unit_test
 	records = SeqIO.parse(os.path.join(data_location, 'test/testassem.gb'), 'genbank')
 	records = list(records)
 
@@ -302,7 +302,7 @@ class GeneTest(ut.TestCase):
 
 
 class HitTest(ut.TestCase):
-	#TODO save_many test
+	#TODO save_many unit_test
 
 	from karkadann.assimilate import assimilate_from_ncbi
 
@@ -317,7 +317,7 @@ class HitTest(ut.TestCase):
 
 	def test_make_hit(self):
 		gene = next(self.contig.genes())
-		newhit = Hit(gene=gene, score=5, hmm="test")
+		newhit = Hit(gene=gene, score=5, hmm="testhmm")
 		try:
 			newhit.save()
 			self.assertTrue(newhit.is_real())
@@ -344,17 +344,34 @@ class ClusterTest(ut.TestCase):
 		cls.ng.delete()
 
 	def test_make_cluster(self):
-		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="test")
+		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass")
 		try:
 			newcluster.save()
 			self.assertTrue(newcluster.is_real())
 			othercluster = Cluster(db_id=newcluster.is_real())
 			self.assertTrue(othercluster.is_real())
 			self.assertEqual(newcluster._kind, othercluster._kind)
-			self.assertEqual(newcluster._kind, 'test')
+			self.assertEqual(newcluster._kind, 'testclass')
 		finally:
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())
+
+	def test_get_fasta(self):
+		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass")
+		newcluster.save()
+		try:
+			records = newcluster.fasta()
+			from tempfile import NamedTemporaryFile as ntf
+			with ntf(mode='w', delete=True) as tempfile:
+				SeqIO.write(records,tempfile.name,'fasta')
+				roundtrip = SeqIO.parse(tempfile.name,'fasta')
+				roundtrip = list(roundtrip)
+				self.assertEqual(len(roundtrip) , len(records))
+				self.assertEqual(roundtrip[0].id , records[0].id)
+
+		finally:
+			newcluster.delete()
+
 
 
 if __name__ == "__main__":

@@ -2,9 +2,13 @@ import ConfigParser
 import MySQLdb as mysql
 import os
 import threading
+from Bio.Alphabet import IUPAC
+
 from Bio import SeqFeature
 from Bio import SeqIO, SeqRecord
 from contextlib import contextmanager
+
+from Bio.Seq import Seq
 from pkg_resources import resource_stream
 
 config_stream = resource_stream(__name__, 'karkadann.cfg')
@@ -226,14 +230,15 @@ class Assembly(dbThing):
 
 class Contig(dbThing):
 	def __init__(self, seq=None, assembly=None, accession=None, db_id=None):
-		with get_cursor() as cur:
 			if db_id:
-				cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;", (db_id,))
-				self._id, self._seq, self._assembly_id, self._acc = cur.fetchone()
+				with get_cursor() as cur:
+					cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;", (db_id,))
+					self._id, self._seq, self._assembly_id, self._acc = cur.fetchone()
 			else:
-				self._seq = seq
-				self._assembly_id = assembly.is_real(cur=cur)
-				self._acc = accession or ""
+				with get_cursor() as cur:
+					self._seq = seq
+					self._assembly_id = assembly.is_real(cur=cur)
+					self._acc = accession or ""
 
 	@cursor_required
 	def save(self, cur=None):
@@ -303,7 +308,7 @@ class Gene(dbThing):
 			self._id = cur.lastrowid
 
 	@staticmethod
-	def save_many(genes_iterable):
+	def _save_many(genes_iterable):
 		with get_cursor() as cur:
 			tuples = [(x._translation,x._start,x._end,x._strand,x._contig,x._acc) for x in genes_iterable]
 			cur.executemany("insert into genes (translation, start, end, strand, contig, accession) values (%s,%s,%s,%s,%s,%s);",
@@ -376,7 +381,7 @@ class Hit(dbThing):
 			self._id = cur.lastrowid
 
 	@staticmethod
-	def save_many(hits_iterable):
+	def _save_many(hits_iterable):
 		with get_cursor() as cur:
 			tuples = [(x._score,x._gene,x._hmm) for x in hits_iterable]
 			cur.executemany("insert into hits (score,gene,hmm) values (%s,%s,%s);",tuples)
@@ -436,4 +441,14 @@ class Cluster(dbThing):
 	def delete(self, cur=None):
 		if self.is_real():
 			cur.execute("delete from clusters where id = %s;", (self._id,))
+
+
+	from Bio.Seq import Seq
+	from Bio.Alphabet import IUPAC
+	@cursor_required
+	def fasta(self,cur=None):
+		if self.is_real(cur=cur):
+			cur.execute("select genes.id,genes.translation from genes join clusters on genes.id=clusters.gene where clusters.id=%s;",
+			            (self._id,))
+			return [SeqRecord.SeqRecord(id=str(gene_id),seq=Seq(trans,alphabet=IUPAC.protein)) for gene_id,trans in cur.fetchall()]
 

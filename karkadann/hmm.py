@@ -48,7 +48,7 @@ def profile(genes, hmms):
 			new_hit = Hit(gene=Gene(db_id=int(gene_id)), score=score, hmm=hmm)
 			if score > 0:
 				hit_list.append(new_hit)
-		Hit.save_many(hit_list)
+		Hit._save_many(hit_list)
 	for hmm in hmms:
 		yarn = Thread(target=threadlet,args=(hmm,protset))
 		yarn.start()

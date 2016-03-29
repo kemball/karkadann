@@ -90,9 +90,8 @@ def merge_features(records, gene_calls, preserve_anno=True):
 	features_of_contigs = defaultdict(list)
 	for name, feature in gene_calls:
 		features_of_contigs[name].append(feature)
-
-	# preserve anno is busted. :/
 	if not preserve_anno:
+
 		for contigrec in records:
 			if contigrec.features and contigrec.features[0].type == "source":
 				sf = contigrec.features[0]
@@ -113,7 +112,6 @@ def merge_features(records, gene_calls, preserve_anno=True):
 					# we should keep this new feature, it doesn't overlap
 					contigrec.features.append(n)
 			contigrec.features.sort(key=lambda x: x.location.start)
-
 	return records
 
 
@@ -133,10 +131,10 @@ def annotate(record, preserve_anno=False):
 
 
 if __name__ == "__main__":
-	# this is nto a real test case but it seems to work so...
-	testrec = SeqIO.parse('/home/kemball/bunicorn/data/test/testassem.gb', 'genbank')
+	# this is nto a real unit_test case but it seems to work so...
+	testrec = SeqIO.parse('/home/kemball/bunicorn/data/unit_test/testassem.gb', 'genbank')
 	betteranno = annotate(testrec)
-	SeqIO.write(betteranno, 'test.gb', 'genbank')
-	testrec = SeqIO.parse('/home/kemball/bunicorn/data/test/testassem.gb', 'genbank')
+	SeqIO.write(betteranno, 'unit_test.gb', 'genbank')
+	testrec = SeqIO.parse('/home/kemball/bunicorn/data/unit_test/testassem.gb', 'genbank')
 	preserved_anno = annotate(testrec, preserve_anno=True)
 	SeqIO.write(preserved_anno, 'test2.gb', 'genbank')
