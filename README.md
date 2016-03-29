@@ -91,6 +91,7 @@ Reads a cluster from the database or makes a new one from a classification and a
 * `.save()` Saves the cluster to the database.
 * `.delete()` Deletes the cluster from the database.
 * `.is_real()` Checks if the cluster has been saved, and if so returns its id.
+* `.fasta()` A bit of a misnomer, returns a list of SeqRecord objects that represent the proteins in the cluster.
 
 ##hmm.py
 #### `list_hmms()`
