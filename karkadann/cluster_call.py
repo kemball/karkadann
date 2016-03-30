@@ -70,13 +70,14 @@ def call_clusters(contig):
 				# we have overlap. do something?
 				clusters[kind][i]=list(set(clusters[kind][i]) | set(clusters[kind[i+1]]))
 				clusters[kind][i+1] = []
+	final_clusters = []
 	for kind in clusters.keys():
 		if len(clusters[kind]):
 			for genes in clusters[kind]:
 				new_cluster = Cluster(gene_list=genes, classification=kind)
 				new_cluster.save()
-	return [clusters[k] for k in clusters.keys() if len(clusters[k])]
-
+				final_clusters.append(new_cluster)
+	return final_clusters
 
 
 

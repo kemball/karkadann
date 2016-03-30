@@ -364,11 +364,12 @@ class Hit(dbThing):
 			self._gene = gene.is_real()
 			self._id = None
 
+	#TODO redundant with gene.hit_scores but not sure which is better.
 	@classmethod
 	def fetch(cls, gene):
 		with get_cursor() as cur:
 			cur.execute("select id from hits where gene = %s;",(gene.is_real(),))
-			return [Hit(db_id=x) for x in cur.fetchall()]
+			return [Hit(db_id=x) for (x,) in cur.fetchall()]
 
 	@cursor_required
 	def delete(self, cur=None):
@@ -443,12 +444,23 @@ class Cluster(dbThing):
 			cur.execute("delete from clusters where id = %s;", (self._id,))
 
 
-	from Bio.Seq import Seq
-	from Bio.Alphabet import IUPAC
 	@cursor_required
-	def fasta(self,cur=None):
+	def faa(self, cur=None):
 		if self.is_real(cur=cur):
-			cur.execute("select genes.id,genes.translation from genes join clusters on genes.id=clusters.gene where clusters.id=%s;",
+			cur.execute("select genes.id,genes.translation from "
+			            "genes join clusters on "
+			            "genes.id=clusters.gene where clusters.id=%s order by genes.start;",
 			            (self._id,))
 			return [SeqRecord.SeqRecord(id=str(gene_id),seq=Seq(trans,alphabet=IUPAC.protein)) for gene_id,trans in cur.fetchall()]
+
+	@cursor_required
+	def fna(self,cur=None):
+		if self.is_real(cur=cur):
+			beginning = min([gene.location.start for gene in self.gene_list])
+			end = max([gene.location.end for gene in self.gene_list])
+			cur.execute("select sequence from contigs join genes on genes.contig =contigs.id where genes.id=%s;",
+			                     (self.gene_list[0].is_real(),))
+			contigseq = Seq(cur.fetchone()[0],alphabet=IUPAC.IUPACAmbiguousDNA)[beginning:end]
+			contig = SeqRecord.SeqRecord(seq=contigseq , id=self._id)
+			return contig
 

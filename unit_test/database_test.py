@@ -329,6 +329,15 @@ class HitTest(ut.TestCase):
 		finally:
 			newhit.delete()
 
+	def test_fetch_hit(self):
+		gene = next(self.contig.genes())
+		newhit = Hit(gene=gene, score=5, hmm="testhmm")
+		try:
+			newhit.save()
+			otherhit = Hit.fetch(gene)
+			self.assertEqual(otherhit[0].is_real(),newhit.is_real())
+		finally:
+			newhit.delete()
 
 class ClusterTest(ut.TestCase):
 	# TODO
@@ -356,23 +365,37 @@ class ClusterTest(ut.TestCase):
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())
 
-	def test_get_fasta(self):
+	def test_get_fna(self):
 		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass")
 		newcluster.save()
 		try:
-			records = newcluster.fasta()
+			records = newcluster.fna()
 			from tempfile import NamedTemporaryFile as ntf
 			with ntf(mode='w', delete=True) as tempfile:
 				SeqIO.write(records,tempfile.name,'fasta')
 				roundtrip = SeqIO.parse(tempfile.name,'fasta')
-				roundtrip = list(roundtrip)
+				roundtrip = list(roundtrip)[0]
 				self.assertEqual(len(roundtrip) , len(records))
-				self.assertEqual(roundtrip[0].id , records[0].id)
-
+				self.assertEqual(roundtrip.id , records.id)
 		finally:
 			newcluster.delete()
 
-
+	def test_get_faa(self):
+		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass")
+		newcluster.save()
+		try:
+			records = newcluster.faa()
+			othercluster = Cluster(db_id=newcluster.is_real())
+			otherrecords = othercluster.faa()
+			self.assertEqual(othercluster._kind,newcluster._kind)
+			self.assertEqual(othercluster._kind,'testclass')
+			self.assertEqual(newcluster.is_real(),othercluster.is_real())
+			self.assertEqual(len(records),len(otherrecords))
+			self.assertEqual(str(records[0]),str(otherrecords[0]))
+		finally:
+			newcluster.delete()
+		self.assertFalse(newcluster.is_real())
+		self.assertFalse(othercluster.is_real())
 
 if __name__ == "__main__":
 	ut.main()
