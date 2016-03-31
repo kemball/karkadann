@@ -91,8 +91,8 @@ Reads a cluster from the database or makes a new one from a classification and a
 * `.save()` Saves the cluster to the database.
 * `.delete()` Deletes the cluster from the database.
 * `.is_real()` Checks if the cluster has been saved, and if so returns its id.
-* `.fasta()` A bit of a misnomer, returns a list of SeqRecord objects that represent the proteins in the cluster.
-
+* `.fna()` Returns a SeqRecord object representing the underlying DNA for the cluster
+* `.faa()` Returns a list of SeqRecords for each protein in the cluster in order.
 ##hmm.py
 #### `list_hmms()`
  Lists all the hmms available in the data directory karkadann maintains.
@@ -107,6 +107,10 @@ Returns the string classifying a gene into a seed for a gene cluster. You almost
 
 #### `call_clusters(contig)`
 Calls all the gene clusters in a given contig and puts them into the database.
+
+##promer.py
+#### `promer_score(clusterone,clustertwo)`
+Returns the average involvement of the two gene clusters. Tidies up after itself, promer is messy. Currently uses real disk, not ./dev/shm. Needs to be stored in the database somehow, on account of how expensive it is to compute. Parallelizes great, though.
 
 ##assimilate.py
 

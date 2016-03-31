@@ -66,6 +66,8 @@ def call_clusters(contig):
 		for i, listed in enumerate(sorted(clusters[kind], key=lambda x: x[0].location.start)):
 			if not len(listed) or listed == clusters[kind][-1]:
 				continue
+			if len(clusters[kind])==1: #no self-overlap
+				continue
 			if listed[-1] in clusters[kind][i+1]:
 				# we have overlap. do something?
 				clusters[kind][i]=list(set(clusters[kind][i]) | set(clusters[kind[i+1]]))

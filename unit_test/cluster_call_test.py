@@ -12,7 +12,7 @@ class ClassifyTest(ut.TestCase):
 		from karkadann.database import data_location
 		print "assimilating for classification testing"
 		before = time()
-		cls.ng = assimilate_from_ncbi(data_location+'/'+'test/testassem.gb')
+		cls.ng = assimilate_from_ncbi(data_location+'/'+'test/test2.gb')
 		cls.assem = next(cls.ng.assemblies())
 		cls.contigs = list(cls.assem.contigs())
 		print "assimilation took %d seconds" % (time()-before)
@@ -31,8 +31,10 @@ class ClassifyTest(ut.TestCase):
 		print "classifying a single gene takes %s seconds"%(time()-before)
 
 	def test_call_clusters(self):
-		before = time()
-		call_clusters(ClassifyTest.contigs[-1])
-		print "calling clusters in a single contig takes %s seconds "% (time()-before)
+		for contig in ClassifyTest.contigs:
+			before = time()
+			call_clusters(contig)
+			print "calling clusters in a single contig takes %s seconds " % (time() - before)
+
 
 
