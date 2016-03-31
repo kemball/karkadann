@@ -9,6 +9,7 @@ import unittest as ut
 
 
 class PromerTest(ut.TestCase):
+	#TODO a more complete test case for this is necessary
 
 	@classmethod
 	def setUpClass(cls):

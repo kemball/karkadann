@@ -110,7 +110,7 @@ Calls all the gene clusters in a given contig and puts them into the database.
 
 ##promer.py
 #### `promer_score(clusterone,clustertwo)`
-Returns the average involvement of the two gene clusters. Tidies up after itself, promer is messy. Currently uses real disk, not ./dev/shm. Needs to be stored in the database somehow, on account of how expensive it is to compute. Parallelizes great, though.
+Returns the average involvement of the two gene clusters. Tidies up after itself, promer is messy. Parallelizes great, though. Checks if the promer score has already been calculated. If it has, fetches that value from the database. If it hasn't, calculates it and stores it in the database.
 
 ##assimilate.py
 
