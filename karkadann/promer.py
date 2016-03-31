@@ -7,6 +7,10 @@ from shutil import rmtree
 
 
 def _parse_delta(deltafilename):
+	leftAA = []
+	rightAA = []
+	leftlen = 1
+	rightlen = 1
 	for line in open(deltafilename, 'r'):
 		if re.match(">(\S+) (\S+) (\d+) (\d+)", line):
 			leftname, rightname, leftlen, rightlen = re.match(">(\S+) (\S+) (\d+) (\d+)", line).groups()
@@ -25,11 +29,25 @@ def _parse_delta(deltafilename):
 			rightstart, rightend = min(rightstart, rightend), max(rightstart, rightend)
 			leftAA[leftstart:leftend] = [1] * (leftend - leftstart)
 			rightAA[rightstart:rightend] = [1] * (rightend - rightstart)
-	return sum(leftAA) / (2.0 * leftlen) + sum(rightAA) / (2.0 * leftlen)
+	return sum(leftAA) / (2.0 * leftlen) + sum(rightAA) / (2.0 * rightlen)
 
 
 def promer_score(clustera, clusterb):
-	return _call_promer(clustera.fna(), clusterb.fna())
+	from database import get_cursor
+	ida = clustera.is_real()
+	idb = clusterb.is_real()
+	if not ida or not idb:
+		raise ValueError("scoring unreal clusters is impossible")
+	# enfore ida<idb
+	ida,idb = min(ida,idb),max(ida,idb)
+	with get_cursor() as cur:
+		cur.execute("select score from promer where l= %s and r =%s;",(ida,idb))
+		for result in cur:
+			return result[0]
+		score = _call_promer(clustera.fna(),clusterb.fna())
+		cur.execute("insert into promer (score,l,r) values(%s,%s,%s);",(score,ida,idb))
+	return score
+
 
 
 def _call_promer(fasta1, fasta2):

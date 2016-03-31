@@ -421,7 +421,7 @@ class Cluster(dbThing):
 	@cursor_required
 	def is_real(self, cur=None):
 		if self._id:
-			cur.execute("select id from clusters where id = %s;", (self._id,))
+			cur.execute("select id from cluster_names where id = %s;", (self._id,))
 			for r in cur.fetchall():
 				return self._id
 		return None
@@ -429,11 +429,14 @@ class Cluster(dbThing):
 	@cursor_required
 	def save(self, cur=None):
 		if not self.is_real():
-			cur.execute("select count(distinct id) from clusters where classification=%s;", (self._kind,))
-			# blah blah race condition blah blah
-			self._id = self._kind + 'q' + str(int(cur.fetchone()[0])+1)
-			cur.execute("select count(*) from clusters where id=%s;", (self._id,))
-			assert(cur.fetchone()[0] == 0)
+			# doesn't have to be unique
+			cur.execute("select genomes.id from genomes join assemblies on assemblies.genome_id=genomes.id "
+			            "join contigs on contigs.assembly_id=assemblies.id "
+			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self.gene_list[0].is_real(),))
+			genome_id = cur.fetchone()[0]
+			# TODO munge this for uniqueness and QOL
+			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (self._kind,genome_id))
+			self._id = cur.lastrowid
 			for gene in self.gene_list:
 				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
 				                (self._id, self._kind, gene.is_real()))
@@ -441,7 +444,7 @@ class Cluster(dbThing):
 	@cursor_required
 	def delete(self, cur=None):
 		if self.is_real():
-			cur.execute("delete from clusters where id = %s;", (self._id,))
+			cur.execute("delete from cluster_names where id = %s;", (self._id,))
 
 
 	@cursor_required
@@ -460,7 +463,7 @@ class Cluster(dbThing):
 			end = max([gene.location.end for gene in self.gene_list])
 			cur.execute("select sequence from contigs join genes on genes.contig =contigs.id where genes.id=%s;",
 			                     (self.gene_list[0].is_real(),))
-			contigseq = Seq(cur.fetchone()[0],alphabet=IUPAC.IUPACAmbiguousDNA)[beginning:end]
-			contig = SeqRecord.SeqRecord(seq=contigseq , id=self._id)
+			contigseq = Seq(cur.fetchone()[0], alphabet=IUPAC.IUPACAmbiguousDNA)[beginning:end]
+			contig = SeqRecord.SeqRecord(seq=contigseq, id=str(self._id))
 			return contig
 

@@ -2,15 +2,39 @@
 
 from karkadann.promer import *
 from karkadann.database import *
+from karkadann.assimilate import assimilate_from_ncbi
+from karkadann.hmm import scan_assembly
+from karkadann.cluster_call import call_clusters
 import unittest as ut
 
 
 class PromerTest(ut.TestCase):
-	pass
+
+	@classmethod
+	def setUpClass(cls):
+		with get_cursor() as cur:
+			cur.execute("select count(*) from clusters;")
+			if not cur.fetchone()[0]:
+				testgbfile = os.path.join(data_location, 'test/testassem.gb')
+				cls.ng = assimilate_from_ncbi(testgbfile)
+				cls.assem = cls.ng.assemblies().next()
+				scan_assembly(cls.assem)
+				for contig in cls.assem.contigs():
+					call_clusters(contig)
+
+
+
 
 	def test_promer_runs(self):
-		one = Cluster(db_id="nrpsq1")
-		two = Cluster(db_id="nrpsq2")
+		with get_cursor() as cur:
+			cur.execute("select distinct id from clusters limit 2;")
+			one_id = cur.fetchone()[0]
+			two_id = cur.fetchone()[0]
+		one = Cluster(db_id=one_id)
+		two = Cluster(db_id=two_id)
+		score = promer_score(one, two)
+		self.assertGreaterEqual(score, 0)
+		self.assertLessEqual(score, 1)
 		score = promer_score(one, two)
 		self.assertGreaterEqual(score, 0)
 		self.assertLessEqual(score, 1)
