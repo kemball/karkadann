@@ -14,7 +14,7 @@ def _slug(text, aggressiveness=2):
 	if aggressiveness > 5:
 		return _slug(text, aggressiveness=3) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
-	if m and aggressiveness == 1 and len(m.group()) > 3:
+	if m and aggressiveness == 1 and len(m.group()) > 4:
 		return m.group().strip()
 	words = text.split()
 	return "".join([word[:aggressiveness] for word in words[:aggressiveness]])
@@ -70,7 +70,8 @@ def assimilate_from_ncbi(ncbifile):
 		if m:
 			assem_acc = m[0]
 		else:
-			raise Exception("Assembly dbxref not found in ncbi-generated genbank.")
+			# they don't always have an assembly accession number. why not?
+			assem_acc = None
 
 		newassem = Assembly(record=reannotated_record, genome=newgenome, accession=assem_acc)
 		# I'd wrap this is a try/except but what could I even do? If this fails Here There Be Problems

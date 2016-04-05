@@ -58,24 +58,50 @@ def call_clusters(contig):
 	genes = list(contig.genes())
 	classifications = list(map(_classify, genes))
 	clusters = defaultdict(list)
-	for i, gc in enumerate(zip(genes, classifications)):
+	for index, gc in enumerate(zip(genes, classifications)):
 		g, c = gc
 		if c:
-			clusters[c].append(genes[i-6:i+7])
-	for kind in clusters.keys():
-		for i, listed in enumerate(sorted(clusters[kind], key=lambda x: x[0].location.start)):
-			if not len(listed) or listed == clusters[kind][-1]:
-				continue
-			if len(clusters[kind])==1: #no self-overlap
-				continue
-			if listed[-1] in clusters[kind][i+1]:
-				# we have overlap. do something?
-				clusters[kind][i]=list(set(clusters[kind][i]) | set(clusters[kind[i+1]]))
-				clusters[kind][i+1] = []
+			start = max(0,index-6) # python helpfully tries to reverse index negative numbers
+			end = index+7
+			clusters[c].append(genes[start:end])
+	for kind in clusters.keys(): # I accidentally optimized away empty cluster kinds. Hooray.
+		# hoo boy ok.
+		# sort by the start position of the first gene, the gene_lists should be sorted by teh database already
+		# take all but the last cluster of this kind and check if they overlap their successor
+		if not len(clusters[kind]):
+			print "PANIC EMPTY CLUSTER KIND %s" % kind
+		if not all(clusters[kind]):
+			print "PANIC empty CLUSTER"
+
+		cluster_list = clusters[kind]
+		cluster_list.sort(key = lambda x: x[0].location.start)
+		derep_list = cluster_list[:]
+		while True:
+			# find clusters with a successor
+			# This is O(n!/(n-k)!) for n clusters and k overlaps.
+			# I am ashamed.
+			for i, listed in enumerate(cluster_list[:-1]):
+				if not listed or not len(listed):
+					continue
+
+				if listed[-1] in cluster_list[i+1]:
+					# we have overlap. remove from the next 'framebuffer'
+					derep_list[i]=list(set(cluster_list[i]) | set(cluster_list[i+1]))
+					derep_list[i+1]=None
+					derep_list[i].sort(key = lambda x: x.location.start)
+			if None in derep_list:
+				# clean up framebuffer and swap
+				derep_list = [x for x in derep_list if x]
+				cluster_list = derep_list[:]
+			else:
+				# No None-> no overlaps -> we can go home now
+				break
+
+		clusters[kind] = [clust for clust in cluster_list if clust]
 	final_clusters = []
 	for kind in clusters.keys():
-		if len(clusters[kind]):
-			for genes in clusters[kind]:
+		for genes in clusters[kind]:
+			if len(genes):
 				new_cluster = Cluster(gene_list=genes, classification=kind)
 				new_cluster.save()
 				final_clusters.append(new_cluster)

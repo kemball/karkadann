@@ -342,7 +342,7 @@ class HitTest(ut.TestCase):
 class ClusterTest(ut.TestCase):
 	# TODO
 
-	from assimilate import assimilate_from_ncbi
+	from karkadann.assimilate import assimilate_from_ncbi
 	testgbfile = os.path.join(data_location, 'test/testassem.gb')
 	ng = assimilate_from_ncbi(testgbfile)
 	assem = next(ng.assemblies())

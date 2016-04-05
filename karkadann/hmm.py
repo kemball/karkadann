@@ -1,6 +1,6 @@
 import os
 import subprocess as sp
-from threading import Thread
+from threading import Thread,Semaphore
 from tempfile import NamedTemporaryFile as ntf
 from database import hmm_location, Hit, Gene
 from Bio import SearchIO, SeqIO, SeqRecord, Seq
@@ -23,9 +23,9 @@ def _call_hmmer(hmm, inputproteins):
 			QRS = SearchIO.parse(hmmoutput, format="hmmer3-text")
 			for qr in QRS:
 				# there's *always* a QR, even though it's usually empty.
-				qr.sort()
+				# qr.sort()
 				# I'm kind of hoping this sorts by hit strength.
-				# worth checking.
+				# worth checking. I guess it doesn't matter anyway.
 
 				for hit in qr:
 					scores[hit.id] = max(scores[hit.id], hit.bitscore)
@@ -35,6 +35,7 @@ def _call_hmmer(hmm, inputproteins):
 
 
 def profile(genes, hmms):
+	#TODO only open a few of these at a time.
 	def aa(geneset):
 		for gene in geneset:
 			yield SeqRecord.SeqRecord(Seq.Seq(gene.translation, IUPAC.protein), id=str(gene.is_real()))
@@ -42,20 +43,22 @@ def profile(genes, hmms):
 	protset = list(aa(list(genes)))
 	skein = []
 
-	def threadlet(hmm,protset):
+	def threadlet(miniprot,hmm,semaphore):
+		semaphore.acquire()
 		hit_list = []
-		for gene_id, score in _call_hmmer(hmm, protset):
+		for gene_id, score in _call_hmmer(hmm, miniprot):
 			new_hit = Hit(gene=Gene(db_id=int(gene_id)), score=score, hmm=hmm)
 			if score > 0:
 				hit_list.append(new_hit)
 		Hit._save_many(hit_list)
+		semaphore.release()
+	sem = Semaphore(10)
 	for hmm in hmms:
-		yarn = Thread(target=threadlet,args=(hmm,protset))
+		yarn = Thread(target=threadlet,args=(protset,hmm,sem))
 		yarn.start()
 		skein.append(yarn)
 	for yarn in skein:
 		yarn.join()
-
 
 import os
 
