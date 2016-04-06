@@ -6,7 +6,7 @@ from time import time
 p = mp.Pool(4,maxtasksperchild=10)
 
 files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb",shell=True).split()
-files = files[10:15]
+files = files[20:40]
 
 from karkadann.assimilate import assimilate_from_ncbi
 before = time()
@@ -18,7 +18,7 @@ assems = [x.assemblies().next() for x in genomes] #should support iteration tho
 from karkadann.hmm import scan_assembly
 before = time()
 list(p.map(scan_assembly,assems))
-print "parallel scanning takes %s secodns" % (time()-before)
+print "parallel scanning takes %s seconds, or %s seconds per" % ((time()-before),(time()-before)/len(assems))
 
 
 def contig_flat(assemblylist):
@@ -31,4 +31,4 @@ listcontigs = list(contig_flat(assems))
 print len(listcontigs)
 before = time()
 clusts = p.map(call_clusters,listcontigs)
-print "parallel mapping takes %s seconds" %(time()-before)
+print "parallel cluster calling takes %s seconds or %s seconds per" %((time()-before),(time()-before)/len(listcontigs))

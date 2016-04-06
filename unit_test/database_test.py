@@ -300,6 +300,20 @@ class GeneTest(ut.TestCase):
 		finally:
 			test_gene.delete()
 
+	def test_record(self):
+		test_gene =  Gene(translation="MICHAELBIOLOGIST",
+		                 contig=self.test_contig,
+		                 start=0,
+		                 end=2,
+		                 strand=-1,
+		                 accession="WP_1337.1")
+		test_gene.save()
+		SeqIO.write(test_gene.record,'foo.fasta','fasta')
+		round_rec = SeqIO.read('foo.fasta','fasta')
+		self.assertEqual(round_rec.id, test_gene.record.id)
+		self.assertEqual(round_rec.seq,test_gene.record.seq)
+		os.remove('foo.fasta')
+
 
 class HitTest(ut.TestCase):
 	#TODO save_many unit_test
@@ -396,6 +410,7 @@ class ClusterTest(ut.TestCase):
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())
 		self.assertFalse(othercluster.is_real())
+
 
 if __name__ == "__main__":
 	ut.main()

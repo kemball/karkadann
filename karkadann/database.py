@@ -346,6 +346,10 @@ class Gene(dbThing):
 		self._end = new_location.end
 		self._strand = new_location.strand
 
+	@property
+	def record(self):
+		return SeqRecord.SeqRecord(id=str(self._id), seq=Seq(self._translation, alphabet=IUPAC.protein))
+
 	def hit_scores(self):
 		with get_cursor() as cur:
 			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))

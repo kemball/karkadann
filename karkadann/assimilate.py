@@ -11,6 +11,8 @@ from string import ascii_lowercase
 def _slug(text, aggressiveness=2):
 	# check for allcaps+numbers words?
 	# those are usually strain names...
+	# something about this doesn't work, but I'm not sure what
+	# it keeps trying smaller names than it should.
 	if aggressiveness > 5:
 		return _slug(text, aggressiveness=3) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
