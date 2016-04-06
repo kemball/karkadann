@@ -348,7 +348,8 @@ class Gene(dbThing):
 
 	@property
 	def record(self):
-		return SeqRecord.SeqRecord(id=str(self._id), seq=Seq(self._translation, alphabet=IUPAC.protein))
+		return SeqRecord.SeqRecord(id="%s|%s_%s"%(self._contig,self._contig, self._id),
+		                           seq=Seq(self._translation, alphabet=IUPAC.protein))
 
 	def hit_scores(self):
 		with get_cursor() as cur:
