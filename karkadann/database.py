@@ -82,6 +82,14 @@ class dbThing:
 
 
 def cursor_required(f):
+	# this also bears some explaining. Quite a few of the .save methods
+	# and suchlike need a cursor to the database, but it's pretty inefficient
+	# to open and close it for every interaction. The methods need to be called
+	# without keyword arguments so other modules can use them without touching
+	# get_cursor(), but I didn't want to write these three lines in every
+	# single method. So I wrote a decorator to do it for me.
+	# This way database actions can share a cursor to their dependents
+	# but it's not compulsory.
 	def cursored_fxn(*args, **kwargs):
 		# enforce keyworded cur argument.
 		if 'cur' in kwargs.keys():
@@ -472,3 +480,21 @@ class Cluster(dbThing):
 			contig = SeqRecord.SeqRecord(seq=contigseq, id=str(self._id))
 			return contig
 
+@cursor_required
+def most_recent_batch(cur=None):
+	cur.execute("select id from orthomcl_batches order by done desc limit 1;")
+	for result in cur:
+		return result[0]
+
+@cursor_required
+def start_batch(cur=None):
+	# this looks weird but the defaults in the table are what I actually want.
+	# go figure.
+	cur.execute("insert into orthomcl_batches () values ();")
+	return cur.lastrowid
+
+@cursor_required
+def save_orthogroup(gene_id,orthogroup,batch = None,cur=None):
+	if not batch:
+		batch = most_recent_batch(cur)
+	cur.execute("insert into orthogroups (batch,group,gene) values (%s,%s,%s);",(batch,orthogroup,gene_id))

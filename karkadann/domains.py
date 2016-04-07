@@ -3,8 +3,12 @@ import os
 from shutil import rmtree
 from fcntl import lockf,LOCK_EX,LOCK_UN
 from Bio import SeqIO
-from database import config
+from database import config,data_location
+from database import save_orthogroup,most_recent_batch,start_batch
 import subprocess as sp
+import re
+from time import time
+
 orthomcl_location = config.get('orthomcl','orthomcl_location')
 user  = config.get('orthomcl','username')
 password = config.get('orthomcl','password')
@@ -32,9 +36,11 @@ def _call_mcl(prot_records):
 		assert os.path.exists('orthoallvall.txt')
 		sp.call("%s/bin/orthomclBlastParser orthoallvall.txt fasta >> ss.txt"%orthomcl_location,shell=True)
 		assert os.path.exists('ss.txt')
-		f = open(os.path.join(homedir,'lock.lock'), 'w')
+		before = time()
+		f = open(os.path.join(data_location,'lock.lock'), 'w')
 		lockf(f, LOCK_EX)
 		f.write(str(os.getpid()))
+		print "waited on orthomcl lock for %s seconds" % (time()-before)
 		try:
 			sp.call("%s/bin/orthomclInstallSchema %s/orthomcl.config orthomcl.log" %(orthomcl_location,orthomcl_location),shell=True)
 			sp.call('%s/bin/orthomclLoadBlast %s/orthomcl.config ss.txt'
@@ -49,6 +55,7 @@ def _call_mcl(prot_records):
 			sp.call('%s/bin/orthomclMclToGroups a 1 < mclOutput > groups.txt'
 			        % (orthomcl_location), shell=True)
 			assert os.path.exists('groups.txt')
+
 		finally:
 			deleteleftovertables='''\
 			drop table CoOrtholog;\
@@ -59,9 +66,29 @@ def _call_mcl(prot_records):
 			sp.call("mysql -e' %s' -u %s -p%s %s"%(deleteleftovertables,user,password,db),shell=True)
 			lockf(f, LOCK_UN)
 			f.close()
-
-
-
+		with open('groups.txt','r') as returnf:
+			return returnf.read()
 	finally:
 		rmtree(mcl_sandbox)
 		os.chdir(homedir)
+
+def parse_groups(grouptext,batch=None):
+	if not batch:
+		batch = most_recent_batch()
+	for line in grouptext:
+		m = re.match('([^:]+):',line)
+		if m:
+			orthogroup = m.group()
+		else:
+			continue
+		genes = re.findall('(\d+)\|\1',line)
+		for gene in genes:
+			gene_id = int(gene)
+			save_orthogroup(gene_id,orthogroup,batch)
+
+def assign_groups(genes):
+	# just a giant iterator of gene objects, please.
+	newbatch = start_batch()
+	prots = [g.record for g in genes]
+	gtext = _call_mcl(prots)
+	parse_groups(gtext,batch=newbatch)
