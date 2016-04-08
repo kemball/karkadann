@@ -37,11 +37,14 @@ from karkadann.database import get_cursor,Cluster
 with get_cursor() as cur:
 	cur.execute("select distinct classification from clusters;")
 	clusterlist = cur.fetchall()
+p.close()
 for (clustertype,) in clusterlist:
 	with get_cursor() as cur:
+		arglist= []
 		cur.execute("select id from clusters where classification=%s;",(clustertype,))
 		clustsbytype = [Cluster(db_id=x) for (x,) in cur]
 		for ca in clustsbytype:
 			for cb in clustsbytype:
-				promer_score(ca,cb)
+				arglist.append((ca,cb))
+		p.map(promer_score,arglist)
 
