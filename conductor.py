@@ -3,7 +3,7 @@ import subprocess as sp
 from time import time
 
 
-p = mp.Pool(4,maxtasksperchild=10)
+p = mp.Pool(maxtasksperchild=10)
 
 files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb",shell=True).split()
 files = files[20:40]
@@ -39,7 +39,7 @@ with get_cursor() as cur:
 	clusterlist = cur.fetchall()
 for (clustertype,) in clusterlist:
 	with get_cursor() as cur:
-		cur.execute("select id from clusters where classification=%s;"(clustertype,))
+		cur.execute("select id from clusters where classification=%s;",(clustertype,))
 		clustsbytype = [Cluster(db_id=x) for (x,) in cur]
 		for ca in clustsbytype:
 			for cb in clustsbytype:
