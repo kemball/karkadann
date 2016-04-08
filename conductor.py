@@ -32,8 +32,8 @@ print len(listcontigs)
 before = time()
 clusts = p.map(call_clusters,listcontigs)
 print "parallel cluster calling takes %s seconds or %s seconds per" %((time()-before),(time()-before)/len(listcontigs))
-from promer import promer_score
-from database import get_cursor,Cluster
+from karkadann.promer import promer_score
+from karkadann.database import get_cursor,Cluster
 with get_cursor() as cur:
 	cur.execute("select distinct classification from clusters;")
 	clusterlist = cur.fetchall()

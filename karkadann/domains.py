@@ -33,6 +33,7 @@ def _call_mcl(prot_records):
 		assert os.path.exists('cluster.pin')
 		# need to thread this or hack up the input into pieces or something.
 		# what is this 2005
+		# TODO
 		sp.call(
 			'blastp -db cluster -query goodProteins.fasta -out orthoallvall.txt -outfmt 6 -num_alignments 10000 -evalue 1e-5 -num_threads 8',
 			shell=True)
@@ -99,3 +100,8 @@ def assign_groups(genes):
 	prots = [g.record for g in genes]
 	gtext = _call_mcl(prots)
 	parse_groups(gtext, batch=newbatch)
+
+
+# TODO write shared-domains code
+def domain_score(clustera, clusterb, batch=most_recent_batch()):
+	pass

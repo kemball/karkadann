@@ -34,7 +34,11 @@ Returns a cursor the database. It's thread safe, I promise. Use like so:
 >
 >	#database actions
 
-If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. Don't be afraid to open a bunch, though, they're cheap. <sup><sub>_they're not, but they will be_</sub></sup>
+If an exception is thrown database stuff will not be committed. In fact database actions are not committed until the with block is exited. 
+
+
+
+
 
 ####`Genome(db_id,genome_name)`
 
@@ -77,6 +81,7 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.is_real()` Checks if the Gene has been saved, and if so returns its id.
 * `.location` Returns the FeatureLocation for the Gene.
 * `.translation` Returns the AA sequence for the Gene.
+* `.orthogroup` Returns a string representing the orthogroup this gene belongs to. A property. `.orthogroup(batch=batchnum)` will return the orthogroup string for that particular batch.
 
 ####`Hit(db_id)` or `Hit(Gene,score,hmm)`
 
@@ -93,6 +98,16 @@ Reads a cluster from the database or makes a new one from a classification and a
 * `.is_real()` Checks if the cluster has been saved, and if so returns its id.
 * `.fna()` Returns a SeqRecord object representing the underlying DNA for the cluster
 * `.faa()` Returns a list of SeqRecords for each protein in the cluster in order.
+
+
+#### Batch functions 
+* `most_recent_batch()` Returns the id for the most recent orthomcl batch created. The default, usually.
+* `start_batch()` Creates a new batch for orthomcl processing.
+* `save_orthogroup(gene,orthogroup,batch=most_recent_batch())` Labels a particular gene as belonging to a particular orthogroup for a particular batch.
+
+You probably shouldn't need these, they're called internally by domains.assign_groups, but you never know.
+
+
 ##hmm.py
 #### `list_hmms()`
  Lists all the hmms available in the data directory karkadann maintains.
@@ -111,6 +126,13 @@ Calls all the gene clusters in a given contig and puts them into the database.
 ##promer.py
 #### `promer_score(clusterone,clustertwo)`
 Returns the average involvement of the two gene clusters. Tidies up after itself, promer is messy. Parallelizes great, though. Checks if the promer score has already been calculated. If it has, fetches that value from the database. If it hasn't, calculates it and stores it in the database.
+
+##domains.py
+#### `assign_groups`(genes)
+Automatically and safely creates a new 'orthomcl batch'. All orthomcl group callings are referenced by batch number so that a second orthomcl clustering can be done without clobbering the first. 
+
+#### `domain_score`(clustera,clusterb,batch)
+Returns the shared-domain score for two clusters.
 
 ##assimilate.py
 

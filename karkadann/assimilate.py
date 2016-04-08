@@ -99,6 +99,10 @@ def assimilate_from_ncbi(ncbifile):
 		raise
 	return newgenome
 
+#TODO
+# Need a raw fasta importer for phosphonate clusters
+# Need a doroghazi importer
+
 
 if __name__ == "__main__":
 	from karkadann.database import data_location
