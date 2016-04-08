@@ -114,7 +114,7 @@ You probably shouldn't need these, they're called internally by domains.assign_g
 #### `scan_assembly(assembly)`
 Runs all the hmms against the specified assembly. Totally unthreaded(for now).
 #### `profile(genes,hmm)`
-Takes an iterator of Gene objects and an hmm string 'AfsA.hmm' for example. Does the needful.
+Takes an iterator of Gene objects and an hmm string 'AfsA.hmm' for example. Does the needful(scans the hmms against the gene translations and then saves the results into the database).
 
 ##cluster_call.py
 #### `_classify(gene)`

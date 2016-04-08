@@ -35,7 +35,7 @@ def _call_hmmer(hmm, inputproteins):
 
 
 def profile(genes, hmms):
-	#TODO only open a few of these at a time.
+	# TODO(MAYBE) return meaningfulresults from this
 	def aa(geneset):
 		for gene in geneset:
 			yield SeqRecord.SeqRecord(Seq.Seq(gene.translation, IUPAC.protein), id=str(gene.is_real()))
