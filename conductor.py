@@ -32,3 +32,16 @@ print len(listcontigs)
 before = time()
 clusts = p.map(call_clusters,listcontigs)
 print "parallel cluster calling takes %s seconds or %s seconds per" %((time()-before),(time()-before)/len(listcontigs))
+from promer import promer_score
+from database import get_cursor,Cluster
+with get_cursor() as cur:
+	cur.execute("select distinct classification from clusters;")
+	clusterlist = cur.fetchall()
+for (clustertype,) in clusterlist:
+	with get_cursor() as cur:
+		cur.execute("select id from clusters where classification=%s;"(clustertype,))
+		clustsbytype = [Cluster(db_id=x) for (x,) in cur]
+		for ca in clustsbytype:
+			for cb in clustsbytype:
+				promer_score(ca,cb)
+

@@ -45,6 +45,15 @@ class mclTest(ut.TestCase):
 		testid = most_recent_batch()
 		self.assertEqual(batchid,testid)
 
+	def test_save_orthogroup(self):
+		print 'test_save_orthogroup'
+		with get_cursor() as cur:
+			cur.execute("select id from genes limit 1;")
+			gene = Gene(db_id=cur.fetchone()[0])
+			save_orthogroup(gene,'ortho1337')
+		self.assertEqual(gene.orthogroup,"ortho1337")
+
+
 	def test_holistic(self):
 		print "test all the things"
 		with get_cursor() as cur:
@@ -54,6 +63,7 @@ class mclTest(ut.TestCase):
 		nb = start_batch()
 		try:
 			assign_groups(list(andre.genes())[:2000])
+			print "done assigning groups"
 		finally:
 			with get_cursor() as cur:
 				cur.execute("delete from orthomcl_batches where id = %s",(nb,))

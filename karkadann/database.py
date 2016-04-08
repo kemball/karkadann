@@ -363,7 +363,17 @@ class Gene(dbThing):
 		with get_cursor() as cur:
 			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))
 			return list(cur.fetchall())
-
+	@property
+	def orthogroup(self,batch=None):
+		if self.is_real():
+			with get_cursor() as cur:
+				if not batch:
+					batch = most_recent_batch(cur=cur)
+				cur.execute("select `group` from orthogroups where gene =%s and batch=%s;",(self.is_real(),batch))
+				for result in cur:
+					return result[0]
+		else:
+			return ""
 
 class Hit(dbThing):
 	def __init__(self, db_id=None, gene=None, score=None, hmm=None):
@@ -494,7 +504,9 @@ def start_batch(cur=None):
 	return cur.lastrowid
 
 @cursor_required
-def save_orthogroup(gene_id,orthogroup,batch = None,cur=None):
+def save_orthogroup(gene,orthogroup,batch = None,cur=None):
 	if not batch:
-		batch = most_recent_batch(cur)
-	cur.execute("insert into orthogroups (batch,group,gene) values (%s,%s,%s);",(batch,orthogroup,gene_id))
+		batch = most_recent_batch(cur=cur)
+	if not gene.is_real():
+		raise ValueError("gene %s needs to be real"%gene._acc)
+	cur.execute("insert into orthogroups (batch,`group`,gene) values (%s,%s,%s);",(batch,orthogroup,gene.is_real()))
