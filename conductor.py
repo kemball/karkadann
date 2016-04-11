@@ -46,5 +46,8 @@ for (clustertype,) in clusterlist:
 		for cb in clustsbytype:
 			if ca!=cb:
 				arglist.append((ca,cb))
-	p.map(promer_score,arglist)
+
+	def splat_promer(args):
+		return promer_score(*args)
+	p.map(splat_promer,arglist)
 
