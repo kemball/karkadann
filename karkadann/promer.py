@@ -42,8 +42,9 @@ def promer_score(clustera, clusterb):
 	ida,idb = min(ida,idb),max(ida,idb)
 	with get_cursor() as cur:
 		cur.execute("select score from promer where l= %s and r =%s;",(ida,idb))
-		for result in cur:
-			return result[0]
+		(result,) = cur.fetchone()
+		if result:
+			return result
 		score = _call_promer(clustera.fna(),clusterb.fna())
 		cur.execute("insert into promer (score,l,r) values(%s,%s,%s);",(score,ida,idb))
 	return score
