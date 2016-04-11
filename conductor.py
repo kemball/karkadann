@@ -32,6 +32,7 @@ print len(listcontigs)
 before = time()
 clusts = p.map(call_clusters,listcontigs)
 print "parallel cluster calling takes %s seconds or %s seconds per" %((time()-before),(time()-before)/len(listcontigs))
+p.close()
 from karkadann.promer import promer_score
 from karkadann.database import get_cursor,Cluster
 with get_cursor() as cur:
@@ -49,5 +50,7 @@ for (clustertype,) in clusterlist:
 
 	def splat_promer(args):
 		return promer_score(*args)
+	print arglist[:10]
+	p = mp.Pool(maxtasksperchild=10)
 	p.map(splat_promer,arglist)
 

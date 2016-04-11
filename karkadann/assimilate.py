@@ -1,5 +1,6 @@
 from Bio import SeqIO
-from Bio import SeqFeature
+from Bio import SeqFeature,BiopythonParserWarning
+import warnings
 from database import Assembly, Genome, Contig, Gene
 from prodigal import annotate
 import re
@@ -48,8 +49,13 @@ from _mysql_exceptions import IntegrityError
 
 
 def assimilate_from_ncbi(ncbifile):
+	# This is very scary. I understand. 100% of ncbi genbank files
+	# have length DBLink fields. "assembly:bleh biosample:bleh etc"
+	# If the whole field is longer than 80 characters, it warns us.
+	# Seems like a lot of spam to ensure you never have to linewrap
+	# when displaying a genbank file, but what do I know.
+	warnings.simplefilter('ignore',BiopythonParserWarning)
 	ncbirecord = list(SeqIO.parse(ncbifile, 'genbank'))
-	# can thread here, but rule #1 of optimization
 	make_standard(ncbirecord)
 	reannotated_record = annotate(ncbirecord, preserve_anno=True)
 	agg = 1
@@ -60,6 +66,8 @@ def assimilate_from_ncbi(ncbifile):
 		try:
 			newgenome.save()
 		except IntegrityError:
+			# This is fairly spammy. I should change it when I add
+			# automagical culture collection detection. TODO
 			print "failed to save genome with name %s trying something else" % newgenome._name
 			agg += 1
 			newgenome = Genome(genome_name=_slug(desc, agg))
@@ -72,7 +80,7 @@ def assimilate_from_ncbi(ncbifile):
 		if m:
 			assem_acc = m[0]
 		else:
-			# they don't always have an assembly accession number. why not?
+			# they don't always have an assembly accession number.
 			assem_acc = None
 
 		newassem = Assembly(record=reannotated_record, genome=newgenome, accession=assem_acc)

@@ -38,7 +38,7 @@ def promer_score(clustera, clusterb):
 	idb = clusterb.is_real()
 	if not ida or not idb:
 		raise ValueError("scoring unreal clusters is impossible")
-	# enfore ida<idb
+	# enforce ida<idb
 	ida,idb = min(ida,idb),max(ida,idb)
 	with get_cursor() as cur:
 		cur.execute("select score from promer where l= %s and r =%s;",(ida,idb))
