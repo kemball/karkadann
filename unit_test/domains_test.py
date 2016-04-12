@@ -7,6 +7,9 @@ import unittest as ut
 from itertools import chain
 
 class mclTest(ut.TestCase):
+	#TODO all these require some testing data to be present.
+	# should set a config flag for that or something.
+
 	def test_call_mcl(self):
 		print "test_call_mcl"
 		with get_cursor() as cur:
@@ -52,7 +55,7 @@ class mclTest(ut.TestCase):
 			cur.execute("select id from genes limit 1;")
 			gene = Gene(db_id=cur.fetchone()[0])
 			save_orthogroup(gene,'ortho1337')
-		self.assertEqual(gene.orthogroup,"ortho1337")
+		self.assertEqual(gene.orthogroup(),"ortho1337")
 
 
 	def test_holistic(self):
@@ -73,17 +76,18 @@ class mclTest(ut.TestCase):
 		print "testing domain scoring"
 		with get_cursor() as cur:
 			# PKS are very common but come in three kinds.
-			cur.execute("select  id from clusters limit 5 where classification like 'PKS%';")
+			cur.execute("select id from clusters where classification like 'PKS%'  limit 50;")
 			clusters = [Cluster(db_id = x) for (x,) in cur.fetchall()]
 		nb = start_batch()
 		try:
-			genes = chain(*[c.gene_list() for c in clusters])
+			genes = chain(*[c.gene_list for c in clusters])
 			assign_groups(genes)
 			clusta = clusters[0]
 			clustb = clusters[1]
 			self.assertEqual(domain_score(clusta,clustb),domain_score(clustb,clusta))
 			self.assertGreaterEqual(domain_score(clusters[1],clusters[2]),0)
 			self.assertLessEqual(domain_score(clusters[3],clusters[4]),1)
+			self.assertEqual(domain_score(clusters[0],clusters[0]),1)
 		finally:
 			with get_cursor() as cur:
 				cur.execute("delete from orthomcl_batches where id = %s",(nb,))

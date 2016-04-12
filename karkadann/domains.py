@@ -105,12 +105,12 @@ def assign_groups(genes):
 
 # TODO write shared-domains code
 def domain_score(clustera, clusterb, batch=most_recent_batch()):
-	total_genes = len(clustera.gene_list(), clusterb.gene_list())
+	total_genes = len(clustera.gene_list)+len( clusterb.gene_list)
 	orthogroups_a = defaultdict(int)
-	for gene in clustera.gene_list():
+	for gene in clustera.gene_list:
 		orthogroups_a[gene.orthogroup(batch=batch)] += 1
 	orthogroups_b = defaultdict(int)
-	for gene in clusterb.gene_list():
+	for gene in clusterb.gene_list:
 		orthogroups_b[gene.orthogroup(batch=batch)] += 1
 	allkeys = list(set(orthogroups_a.keys()) | set(orthogroups_b.keys()))
 	sames = 0

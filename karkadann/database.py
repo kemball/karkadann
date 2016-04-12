@@ -363,7 +363,8 @@ class Gene(dbThing):
 		with get_cursor() as cur:
 			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))
 			return list(cur.fetchall())
-	@property
+
+
 	def orthogroup(self,batch=None):
 		if self.is_real():
 			with get_cursor() as cur:
@@ -427,19 +428,22 @@ class Cluster(dbThing):
 
 	def __init__(self,db_id=None, gene_list=None, classification=None):
 		if db_id:
-			self.gene_list = []
+			self._gene_list = []
 			with get_cursor() as cur:
 				cur.execute("select gene,classification from clusters where id = %s;", (db_id,))
 				for g,c in cur.fetchall():
-					self.gene_list.append(Gene(db_id=g))
+					self._gene_list.append(Gene(db_id=g))
 					if c:
 						self._kind = c
 				self._id = db_id
 		else:
-			self.gene_list = gene_list
+			self._gene_list = gene_list
 			self._id = None
 			self._kind = classification
 
+	@property
+	def gene_list(self):
+		return self._gene_list
 
 	@cursor_required
 	def is_real(self, cur=None):
@@ -455,12 +459,12 @@ class Cluster(dbThing):
 			# doesn't have to be unique
 			cur.execute("select genomes.id from genomes join assemblies on assemblies.genome_id=genomes.id "
 			            "join contigs on contigs.assembly_id=assemblies.id "
-			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self.gene_list[0].is_real(),))
+			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self._gene_list[0].is_real(),))
 			genome_id = cur.fetchone()[0]
 			# TODO munge this for uniqueness and QOL
 			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (self._kind,genome_id))
 			self._id = cur.lastrowid
-			for gene in self.gene_list:
+			for gene in self._gene_list:
 				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
 				                (self._id, self._kind, gene.is_real()))
 
@@ -482,10 +486,10 @@ class Cluster(dbThing):
 	@cursor_required
 	def fna(self,cur=None):
 		if self.is_real(cur=cur):
-			beginning = min([gene.location.start for gene in self.gene_list])
-			end = max([gene.location.end for gene in self.gene_list])
+			beginning = min([gene.location.start for gene in self._gene_list])
+			end = max([gene.location.end for gene in self._gene_list])
 			cur.execute("select sequence from contigs join genes on genes.contig =contigs.id where genes.id=%s;",
-			                     (self.gene_list[0].is_real(),))
+			            (self._gene_list[0].is_real(),))
 			contigseq = Seq(cur.fetchone()[0], alphabet=IUPAC.IUPACAmbiguousDNA)[beginning:end]
 			contig = SeqRecord.SeqRecord(seq=contigseq, id=str(self._id))
 			return contig
