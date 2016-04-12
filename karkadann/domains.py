@@ -9,6 +9,7 @@ from database import Gene
 import subprocess as sp
 import re
 from time import time
+from collections import defaultdict
 
 orthomcl_location = config.get('orthomcl', 'orthomcl_location')
 user = config.get('orthomcl', 'username')
@@ -104,4 +105,15 @@ def assign_groups(genes):
 
 # TODO write shared-domains code
 def domain_score(clustera, clusterb, batch=most_recent_batch()):
-	pass
+	total_genes = len(clustera.gene_list(), clusterb.gene_list())
+	orthogroups_a = defaultdict(int)
+	for gene in clustera.gene_list():
+		orthogroups_a[gene.orthogroup(batch=batch)] += 1
+	orthogroups_b = defaultdict(int)
+	for gene in clusterb.gene_list():
+		orthogroups_b[gene.orthogroup(batch=batch)] += 1
+	allkeys = list(set(orthogroups_a.keys()) | set(orthogroups_b.keys()))
+	sames = 0
+	for key in allkeys:
+		sames += min(orthogroups_a[key], orthogroups_b[key])
+	return sames * 2.0 / total_genes

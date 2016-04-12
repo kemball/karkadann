@@ -4,6 +4,7 @@ from karkadann.domains import _call_mcl
 from karkadann.database import *
 
 import unittest as ut
+from itertools import chain
 
 class mclTest(ut.TestCase):
 	def test_call_mcl(self):
@@ -64,6 +65,25 @@ class mclTest(ut.TestCase):
 		try:
 			assign_groups(list(andre.genes())[:2000])
 			print "done assigning groups"
+		finally:
+			with get_cursor() as cur:
+				cur.execute("delete from orthomcl_batches where id = %s",(nb,))
+
+	def test_score(self):
+		print "testing domain scoring"
+		with get_cursor() as cur:
+			# PKS are very common but come in three kinds.
+			cur.execute("select  id from clusters limit 5 where classification like 'PKS%';")
+			clusters = [Cluster(db_id = x) for (x,) in cur.fetchall()]
+		nb = start_batch()
+		try:
+			genes = chain(*[c.gene_list() for c in clusters])
+			assign_groups(genes)
+			clusta = clusters[0]
+			clustb = clusters[1]
+			self.assertEqual(domain_score(clusta,clustb),domain_score(clustb,clusta))
+			self.assertGreaterEqual(domain_score(clusters[1],clusters[2]),0)
+			self.assertLessEqual(domain_score(clusters[3],clusters[4]),1)
 		finally:
 			with get_cursor() as cur:
 				cur.execute("delete from orthomcl_batches where id = %s",(nb,))

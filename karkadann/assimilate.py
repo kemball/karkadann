@@ -8,6 +8,12 @@ import re
 from random import sample
 from string import ascii_lowercase
 
+list_of_culture_collections = [
+	"DSM",
+	"NRRL",
+	"ATCC"
+]
+
 
 def _slug(text, aggressiveness=2):
 	# check for allcaps+numbers words?
@@ -17,13 +23,12 @@ def _slug(text, aggressiveness=2):
 	if aggressiveness > 5:
 		return _slug(text, aggressiveness=3) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
-	if m and aggressiveness == 1 and len(m.group()) > 4:
+	if m and aggressiveness == 1 and m.group().strip() not in list_of_culture_collections:
 		return m.group().strip()
 	words = text.split()
 	return "".join([word[:aggressiveness] for word in words[:aggressiveness]])
 
 
-import re
 
 
 def make_standard(records):

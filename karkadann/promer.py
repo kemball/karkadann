@@ -1,4 +1,5 @@
 import subprocess as sp
+from _mysql_exceptions import IntegrityError
 from tempfile import mkdtemp
 from Bio import SeqIO
 import os
@@ -36,17 +37,22 @@ def promer_score(clustera, clusterb):
 	from database import get_cursor
 	ida = clustera.is_real()
 	idb = clusterb.is_real()
+	if ida==idb:
+		return 1
 	if not ida or not idb:
 		raise ValueError("scoring unreal clusters is impossible")
 	# enforce ida<idb
 	ida,idb = min(ida,idb),max(ida,idb)
 	with get_cursor() as cur:
 		cur.execute("select score from promer where l= %s and r =%s;",(ida,idb))
-		(result,) = cur.fetchone()
+		result = cur.fetchone()
 		if result:
-			return result
+			return result[0]
 		score = _call_promer(clustera.fna(),clusterb.fna())
-		cur.execute("insert into promer (score,l,r) values(%s,%s,%s);",(score,ida,idb))
+		try:
+			cur.execute("insert into promer (score,l,r) values(%s,%s,%s);",(score,ida,idb))
+		except IntegrityError as e:
+			print "possible threading problem caught. Do clusters %s and %s have a score?" %(ida,idb)
 	return score
 
 

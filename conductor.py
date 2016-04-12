@@ -40,25 +40,22 @@ print "parallel cluster calling takes %s seconds or %s seconds per" % (
 (time() - before), (time() - before) / len(listcontigs))
 p.close()
 
+def splat_promer(args):
+		return promer_score(*args)
 
+np = mp.Pool(maxtasksperchild=100)
+
+from itertools import combinations
 with get_cursor() as cur:
 	cur.execute("select distinct classification from clusters;")
 	clusterlist = cur.fetchall()
 for (clustertype,) in clusterlist:
 	with get_cursor() as cur:
 		arglist = []
-		cur.execute("select id from clusters where classification=%s;", (clustertype,))
+		cur.execute("select distinct id from clusters where classification=%s;", (clustertype,))
 		clustsbytype = [Cluster(db_id=x) for (x,) in cur]
-	for ca in clustsbytype:
-		for cb in clustsbytype:
-			if ca != cb:
-				arglist.append((ca, cb))
+	for (ca,cb) in combinations(clustsbytype,2):
+			arglist.append((ca, cb))
 
-
-	def splat_promer(args):
-		return promer_score(*args)
-
-
-	print arglist[:10]
-	np = mp.Pool(maxtasksperchild=10)
+	print "packed up %s clusters for clustertype %s" % (len(arglist),clustertype)
 	np.map(splat_promer, arglist)
