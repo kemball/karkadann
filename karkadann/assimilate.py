@@ -11,22 +11,23 @@ from string import ascii_lowercase
 list_of_culture_collections = [
 	"DSM",
 	"NRRL",
-	"ATCC"
+	"ATCC",
+	"SCGC"
 ]
 
 
 def _slug(text, aggressiveness=2):
 	# check for allcaps+numbers words?
 	# those are usually strain names...
-	# something about this doesn't work, but I'm not sure what
-	# it keeps trying smaller names than it should.
+	# Really should put culture collection hints into the names table. *shrug*.
+	# TODO put culture collection hitns into the names table.
 	if aggressiveness > 5:
 		return _slug(text, aggressiveness=3) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
 	if m and aggressiveness == 1 and m.group().strip() not in list_of_culture_collections:
 		return m.group().strip()
 	words = text.split()
-	return "".join([word[:aggressiveness] for word in words[:aggressiveness]])
+	return "".join([word[:aggressiveness] for word in words[:max(aggressiveness,4)]])
 
 
 

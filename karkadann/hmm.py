@@ -8,6 +8,7 @@ from Bio.Alphabet import IUPAC
 
 
 def _call_hmmer(hmm, inputproteins):
+	# TODO, save HSPS from this for uclust.
 	inputproteins = list(inputproteins)
 	scores = {}
 	for ip in inputproteins:

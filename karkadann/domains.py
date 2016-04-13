@@ -103,7 +103,6 @@ def assign_groups(genes):
 	parse_groups(gtext, batch=newbatch)
 
 
-# TODO write shared-domains code
 def domain_score(clustera, clusterb, batch=most_recent_batch()):
 	total_genes = len(clustera.gene_list)+len( clusterb.gene_list)
 	orthogroups_a = defaultdict(int)
@@ -116,4 +115,6 @@ def domain_score(clustera, clusterb, batch=most_recent_batch()):
 	sames = 0
 	for key in allkeys:
 		sames += min(orthogroups_a[key], orthogroups_b[key])
-	return sames * 2.0 / total_genes
+	# The -2/-2 here is to correct for the shared orthogroup
+	# that conceivably is always present: the cluster-starting hit.
+	return (sames * 2.0-2.0) / (total_genes - 2.0)

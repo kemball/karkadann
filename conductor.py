@@ -58,4 +58,7 @@ for (clustertype,) in clusterlist:
 			arglist.append((ca, cb))
 
 	print "packed up %s clusters for clustertype %s" % (len(arglist),clustertype)
-	np.map(splat_promer, arglist)
+	if len(arglist>10):
+		np.map(splat_promer,arglist)
+	else:
+		map(splat_promer, arglist)

@@ -51,7 +51,7 @@ def promer_score(clustera, clusterb):
 		score = _call_promer(clustera.fna(),clusterb.fna())
 		try:
 			cur.execute("insert into promer (score,l,r) values(%s,%s,%s);",(score,ida,idb))
-		except IntegrityError as e:
+		except IntegrityError:
 			print "possible threading problem caught. Do clusters %s and %s have a score?" %(ida,idb)
 	return score
 
