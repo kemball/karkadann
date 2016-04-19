@@ -61,7 +61,6 @@ def profile(genes, hmms):
 	for yarn in skein:
 		yarn.join()
 
-import os
 
 
 def list_hmms():

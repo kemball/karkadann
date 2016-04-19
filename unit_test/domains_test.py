@@ -76,18 +76,22 @@ class mclTest(ut.TestCase):
 		print "testing domain scoring"
 		with get_cursor() as cur:
 			# PKS are very common but come in three kinds.
-			cur.execute("select id from clusters where classification like 'PKS%'  limit 50;")
+			cur.execute("select distinct id from clusters  limit 50;")
 			clusters = [Cluster(db_id = x) for (x,) in cur.fetchall()]
 		nb = start_batch()
+		print "got %s clusters, testing them" %len(clusters)
+		if len(clusters)<5:
+			print "not enough clusters around, buzz off"
+			return
 		try:
 			genes = chain(*[c.gene_list for c in clusters])
 			assign_groups(genes)
 			clusta = clusters[0]
 			clustb = clusters[1]
-			self.assertEqual(domain_score(clusta,clustb),domain_score(clustb,clusta))
-			self.assertGreaterEqual(domain_score(clusters[1],clusters[2]),0)
-			self.assertLessEqual(domain_score(clusters[3],clusters[4]),1)
-			self.assertEqual(domain_score(clusters[0],clusters[0]),1)
+			self.assertEqual(ortho_score(clusta, clustb), ortho_score(clustb, clusta))
+			self.assertGreaterEqual(ortho_score(clusters[1], clusters[2]), 0)
+			self.assertLessEqual(ortho_score(clusters[3], clusters[4]), 1)
+			self.assertEqual(ortho_score(clusters[0], clusters[0]), 1)
 		finally:
 			with get_cursor() as cur:
 				cur.execute("delete from orthomcl_batches where id = %s",(nb,))

@@ -1,5 +1,5 @@
 from Bio import SeqIO
-from Bio import SeqFeature,BiopythonParserWarning
+from Bio import SeqFeature,BiopythonWarning
 import warnings
 from database import Assembly, Genome, Contig, Gene
 from prodigal import annotate
@@ -21,13 +21,13 @@ def _slug(text, aggressiveness=2):
 	# those are usually strain names...
 	# Really should put culture collection hints into the names table. *shrug*.
 	# TODO put culture collection hitns into the names table.
-	if aggressiveness > 5:
-		return _slug(text, aggressiveness=3) + "".join(sample(ascii_lowercase, 5))
+	if aggressiveness > 7:
+		return _slug(text, aggressiveness=7) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
 	if m and aggressiveness == 1 and m.group().strip() not in list_of_culture_collections:
 		return m.group().strip()
 	words = text.split()
-	return "".join([word[:aggressiveness] for word in words[:max(aggressiveness,4)]])
+	return "".join([word[:aggressiveness] for word in words[:min(aggressiveness,4)]])
 
 
 
@@ -60,11 +60,13 @@ def assimilate_from_ncbi(ncbifile):
 	# If the whole field is longer than 80 characters, it warns us.
 	# Seems like a lot of spam to ensure you never have to linewrap
 	# when displaying a genbank file, but what do I know.
-	warnings.simplefilter('ignore',BiopythonParserWarning)
+
+	warnings.simplefilter('ignore',BiopythonWarning)
+
 	ncbirecord = list(SeqIO.parse(ncbifile, 'genbank'))
 	make_standard(ncbirecord)
 	reannotated_record = annotate(ncbirecord, preserve_anno=True)
-	agg = 1
+	agg = 2
 	desc = reannotated_record[0].description
 	genome_name = _slug(desc, agg)
 	newgenome = Genome(genome_name=genome_name)
@@ -80,7 +82,6 @@ def assimilate_from_ncbi(ncbifile):
 
 	# this better be right...
 	newgenome.binomial(reannotated_record[0].annotations['organism'])
-
 	try:
 		m = re.findall(r'Assembly:(\S+)', reannotated_record[0].dbxrefs[0])
 		if m:
@@ -92,7 +93,7 @@ def assimilate_from_ncbi(ncbifile):
 		newassem = Assembly(record=reannotated_record, genome=newgenome, accession=assem_acc)
 		# I'd wrap this is a try/except but what could I even do? If this fails Here There Be Problems
 		newassem.save()
-
+		print "assembly for genome %s saved" % newgenome._name
 		for record in reannotated_record:
 			newcontig = Contig(seq=str(record.seq), assembly=newassem, accession=record.id)
 			newcontig.save()
@@ -107,6 +108,7 @@ def assimilate_from_ncbi(ncbifile):
 					               accession=feat.qualifiers.get("protein_id", [None])[0])
 					gene_iterable.append(newgene)
 			Gene._save_many(gene_iterable)
+		print "all contigs for genome %s saved" %newgenome._name
 
 	except:
 		newgenome.delete()

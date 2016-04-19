@@ -66,7 +66,6 @@ def call_clusters(contig):
 			clusters[c].append(genes[start:end])
 	for kind in clusters.keys(): # I accidentally optimized away empty cluster kinds. Hooray.
 		# hoo boy ok.
-		# sort by the start position of the first gene, the gene_lists should be sorted by teh database already
 		# take all but the last cluster of this kind and check if they overlap their successor
 		if not len(clusters[kind]):
 			print "PANIC EMPTY CLUSTER KIND %s" % kind
@@ -78,8 +77,9 @@ def call_clusters(contig):
 		derep_list = cluster_list[:]
 		while True:
 			# find clusters with a successor
-			# This is O(n!/(n-k)!) for n clusters and k overlaps.
-			# I am ashamed.
+			# This should combine clusters in megasynthase families at least.
+			# PKS class X and nrps can be hybrid.
+			# TODO ^ that
 			for i, listed in enumerate(cluster_list[:-1]):
 				if not listed or not len(listed):
 					continue

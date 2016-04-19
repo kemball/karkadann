@@ -2,6 +2,7 @@ import ConfigParser
 import MySQLdb as mysql
 import os
 import threading
+import Queue
 from Bio.Alphabet import IUPAC
 
 from Bio import SeqFeature
@@ -36,7 +37,6 @@ hmm_location = os.path.join(data_location, 'hmm')
 if not os.access(hmm_location, os.R_OK):
 	os.mkdir(hmm_location)
 
-threadLocal = threading.local()
 
 
 
@@ -47,27 +47,20 @@ def get_cursor():
 	# get_cursor() returns a generator with a single item in it: the connection
 	# The generator wrapper lets us call .close() appropriately when the generator returns
 	# this is for use in `with get_cursor() as curse:`
-	# Generators in general are not thread-safe: if a generator is trying to generate another value
-	# after yield returns and is prompted to do that same thing again it gets confused and sad.
-	# This looks like a generator, but it's not. It returns many small generators instead of one large
-	# connection generator. I could also put connection pools etc in here but that's work so I haven't.
-	# the whole point being I don't have to use closing() everywhere, I have thread-safe cursors,
-	# AND I can put in pools later. (I already tried once and screwed it up somehow. Oh well.)
 
-	if hasattr(threadLocal, 'conn'):
-		conn = threadLocal.conn
-	else:
-		conn = mysql.connect(host=host, user=username, passwd=password, db=dbname)
-		threadLocal.conn = conn
+	conn = mysql.connect(host=host, user=username, passwd=password, db=dbname)
 	curse = conn.cursor()
 	try:
 		yield curse
 		conn.commit()
+
 	# if something bad happened don't commit
 	# I checked, it works.
-
 	finally:
 		curse.close()
+		conn.close()
+	# this makes a new connect *every* time.
+	# it does goddamn work tho
 
 
 class dbThing:
@@ -161,7 +154,8 @@ class Genome(dbThing):
 	def assemblies(self, cur=None):
 		if self.is_real(cur=cur):
 			cur.execute("select id from assemblies where genome_id = %s;", (self._id,))
-			return (Assembly(db_id=x) for (x,) in cur.fetchall())
+			ids = list(cur.fetchall())
+			return (Assembly(db_id=x) for (x,) in ids)
 
 
 class Assembly(dbThing):
@@ -220,7 +214,8 @@ class Assembly(dbThing):
 
 		if self.is_real(cur=cur):
 			cur.execute("select id from contigs where assembly_id=%s;", (self._id,))
-			return (Contig(db_id=x[0]) for x in cur.fetchall())
+			results = cur.fetchall()
+			return (Contig(db_id=x[0]) for x in results)
 
 	@staticmethod
 	def save_record(record, salt=None):
@@ -243,10 +238,9 @@ class Contig(dbThing):
 					cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;", (db_id,))
 					self._id, self._seq, self._assembly_id, self._acc = cur.fetchone()
 			else:
-				with get_cursor() as cur:
-					self._seq = seq
-					self._assembly_id = assembly.is_real(cur=cur)
-					self._acc = accession or ""
+				self._seq = seq
+				self._assembly_id = assembly.is_real()
+				self._acc = accession or ""
 
 	@cursor_required
 	def save(self, cur=None):
@@ -295,9 +289,9 @@ class Gene(dbThing):
 			with get_cursor() as cur:
 				cur.execute("select id,translation,contig,start,end,strand,accession from genes where id=%s;", (db_id,))
 				self._id, self._translation, self._contig, self._start, self._end, self._strand, self._acc = cur.fetchone()
-				self._start = int(self._start)
-				self._end = int(self._end)
-				self._strand = int(self._strand)
+			self._start = int(self._start)
+			self._end = int(self._end)
+			self._strand = int(self._strand)
 		else:
 			self._id = None
 			self._translation = translation
@@ -364,13 +358,12 @@ class Gene(dbThing):
 			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))
 			return list(cur.fetchall())
 
-
 	def orthogroup(self,batch=None):
 		if self.is_real():
 			with get_cursor() as cur:
 				if not batch:
 					batch = most_recent_batch(cur=cur)
-				cur.execute("select `group` from orthogroups where gene =%s and batch=%s;",(self.is_real(),batch))
+				cur.execute("select `group_name` from orthogroups where gene =%s and batch=%s;",(self._id,batch))
 				for result in cur:
 					return result[0]
 		else:
@@ -388,7 +381,7 @@ class Hit(dbThing):
 			self._gene = gene.is_real()
 			self._id = None
 
-	#TODO redundant with gene.hit_scores but not sure which is better.
+	# TODO redundant with gene.hit_scores but not sure which is better.
 	@classmethod
 	def fetch(cls, gene):
 		with get_cursor() as cur:
@@ -494,11 +487,13 @@ class Cluster(dbThing):
 			contig = SeqRecord.SeqRecord(seq=contigseq, id=str(self._id))
 			return contig
 
+
 @cursor_required
 def most_recent_batch(cur=None):
 	cur.execute("select id from orthomcl_batches order by done desc limit 1;")
 	for result in cur:
 		return result[0]
+
 
 @cursor_required
 def start_batch(cur=None):
@@ -507,10 +502,13 @@ def start_batch(cur=None):
 	cur.execute("insert into orthomcl_batches () values ();")
 	return cur.lastrowid
 
-@cursor_required
-def save_orthogroup(gene,orthogroup,batch = None,cur=None):
-	if not batch:
-		batch = most_recent_batch(cur=cur)
-	if not gene.is_real():
-		raise ValueError("gene %s needs to be real"%gene._acc)
-	cur.execute("insert into orthogroups (batch,`group`,gene) values (%s,%s,%s);",(batch,orthogroup,gene.is_real()))
+
+def save_orthogroup(gene, orthogroup, batch=None):
+	print "saving orthogroup"
+	with get_cursor() as cur:
+		if not batch:
+			batch = most_recent_batch(cur=cur)
+		if not gene.is_real():
+			raise ValueError("gene %s needs to be real" % gene._acc)
+		cur.execute("insert into orthogroups (batch,`group_name`,gene) values (%s,%s,%s);",
+		            (batch, orthogroup, gene.is_real()))

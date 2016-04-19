@@ -1,4 +1,4 @@
-from tempfile import mkdtemp
+from tempfile import mkdtemp,NamedTemporaryFile
 import os
 from shutil import rmtree
 from fcntl import lockf, LOCK_EX, LOCK_UN
@@ -7,6 +7,7 @@ from database import config, data_location
 from database import save_orthogroup, most_recent_batch, start_batch
 from database import Gene
 import subprocess as sp
+import multiprocessing as mp
 import re
 from time import time
 from collections import defaultdict
@@ -17,6 +18,32 @@ password = config.get('orthomcl', 'password')
 db = config.get('orthomcl', 'dbname')
 mcl_location = sp.check_output('which mcl', shell=True).strip()
 
+# has to be sandboxed
+def cycle_blast(input="goodProteins.fasta"):
+	format_proc = sp.Popen("formatdb -t cluster -i %s -p T -n cluster"%input,shell=True)
+	assert os.path.exists('cluster.pin')
+	try:
+		num_cores = mp.cpu_count()
+	except NotImplementedError:
+		num_cores = 10
+	records = SeqIO.parse(input,'fasta')
+	chunks = [[]]*num_cores
+	for i,rec in enumerate(records):
+		chunks[i%num_cores].append(rec)
+
+	for number,chunk in enumerate(chunks):
+		if len(chunk):
+			SeqIO.write(chunk,'goodProteins%s.fasta'%number,'fasta')
+	format_proc.wait()
+	procs =[]
+	for number,chunk in enumerate(chunks):
+		if not len(chunk):
+			continue
+		np = sp.Popen("blastp -db cluster -query goodProteins%s.fasta -out orthoallvall%s.txt -outfmt 6 -num_alignments 10000 -evalue 1e-5 "%(number,number),shell=True)
+		procs.append(np)
+	map(lambda x: x.wait(),procs)
+	sp.call("cat orthoallvall* > orthoallvall.txt",shell=True)
+	return "orthoallvall.txt"
 
 def _call_mcl(prot_records):
 	homedir = os.getcwd()
@@ -35,9 +62,9 @@ def _call_mcl(prot_records):
 		# need to thread this or hack up the input into pieces or something.
 		# what is this 2005
 		# TODO
-		sp.call(
-			'blastp -db cluster -query goodProteins.fasta -out orthoallvall.txt -outfmt 6 -num_alignments 10000 -evalue 1e-5 -num_threads 8',
-			shell=True)
+		before = time()
+		cycle_blast(input='goodProteins.fasta')
+		print "blastp step of orthomcl takes %s seconds for %s proteins" %(time()-before,len(prot_records))
 		assert os.path.exists('orthoallvall.txt')
 		sp.call("%s/bin/orthomclBlastParser orthoallvall.txt fasta >> ss.txt" % orthomcl_location, shell=True)
 		assert os.path.exists('ss.txt')
@@ -103,7 +130,7 @@ def assign_groups(genes):
 	parse_groups(gtext, batch=newbatch)
 
 
-def domain_score(clustera, clusterb, batch=most_recent_batch()):
+def ortho_score(clustera, clusterb, batch=most_recent_batch()):
 	total_genes = len(clustera.gene_list)+len( clusterb.gene_list)
 	orthogroups_a = defaultdict(int)
 	for gene in clustera.gene_list:
