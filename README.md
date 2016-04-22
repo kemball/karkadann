@@ -142,6 +142,10 @@ Tools for importing genbank files. Deciding on useful names, validating accessio
 
 Does exactly what it sounds like. Takes just one minute for a 10Mb genome, counting time taken for prodigal, merging the features together, writing all the stuff to the database. Prodigal takes 20-40 seconds no matter what. Picks a genome name from the description of the genbank file. Reads the assembly accession number off DBLINK. Could cross-reference against Biosample in the future if that is required or interesting.
 
+####`assimilate_from_fasta(fastafile)`
+
+Does exactly what it sounds like. Takes a fasta file of contigs and tries to make educated guesses about what the organism name etc is likely to be. Mostly gets it wrong, but it tries. Annotates and saves to the database.
+
 Will write another helper that slurps data out of the gcf database.
 
 ####`make_standard(records)`
