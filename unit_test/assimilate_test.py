@@ -9,6 +9,7 @@ import unittest as ut
 
 class AssimilateTest(ut.TestCase):
 	testgbfile = os.path.join(data_location, 'test/testassem.gb')
+	testfastafile = os.path.join(data_location,'test/test.fa')
 
 	def test_slug_basic(self):
 		recs = list(SeqIO.parse(self.testgbfile, 'genbank'))
@@ -23,6 +24,7 @@ class AssimilateTest(ut.TestCase):
 		self.assertIn('translation', recs[0].features[4].qualifiers.keys())
 
 	def test_assimilate(self):
+		print "testing genbank assimilation"
 		from time import time
 		before = time()
 		ng = assimilate_from_ncbi(self.testgbfile)
@@ -42,6 +44,11 @@ class AssimilateTest(ut.TestCase):
 			self.assertIsNotNone(cur.fetchone())
 		ng.delete()
 		print "running delete took %s seconds" % str(time() - now)
+
+	def test_fasta(self):
+		print "testing fasta assimilation"
+		ng = assimilate_from_fasta(self.testfastafile)
+		self.assertTrue(ng.is_real())
 
 	def test_slug_twins(self):
 		# when they have very similar description fields and might have trouble making unique genome names.
