@@ -1,10 +1,12 @@
 import os
 import subprocess as sp
-from threading import Thread,Semaphore
 from tempfile import NamedTemporaryFile as ntf
-from database import hmm_location, Hit, Gene
+from threading import Thread,Semaphore
+
 from Bio import SearchIO, SeqIO, SeqRecord, Seq
 from Bio.Alphabet import IUPAC
+
+from database import hmm_location, Hit, Gene
 
 
 def _call_hmmer(hmm, inputproteins):
@@ -28,11 +30,18 @@ def _call_hmmer(hmm, inputproteins):
 				# I'm kind of hoping this sorts by hit strength.
 				# worth checking. I guess it doesn't matter anyway.
 
+				# qlength = qr.seq_len
 				for hit in qr:
 					scores[hit.id] = max(scores[hit.id], hit.bitscore)
-	for ip in inputproteins:
-		if scores[ip.id]:
-			yield ip.id, scores[ip.id]
+					print len(hit.hsps)
+					for hsp in hit.hsps:
+						yield hit.id,hsp.bitscore,hsp.hit.seq
+						evalue = hsp.evalue
+						hmmstart = hsp.hit_start
+						hitstart = hsp.query_start
+						hitend = hsp.query_end
+						# print hsp.hit.seq # this is the alignment with the --- in.I guess jsut strip them??
+
 
 
 def profile(genes, hmms):
@@ -47,7 +56,7 @@ def profile(genes, hmms):
 	def threadlet(miniprot,hmm,semaphore):
 		semaphore.acquire()
 		hit_list = []
-		for gene_id, score in _call_hmmer(hmm, miniprot):
+		for gene_id, score,sequence in _call_hmmer(hmm, miniprot):
 			new_hit = Hit(gene=Gene(db_id=int(gene_id)), score=score, hmm=hmm)
 			if score > 0:
 				hit_list.append(new_hit)

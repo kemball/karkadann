@@ -370,12 +370,13 @@ class Gene(dbThing):
 			return ""
 
 class Hit(dbThing):
-	def __init__(self, db_id=None, gene=None, score=None, hmm=None):
+	def __init__(self, db_id=None, gene=None, score=None,seq=None, hmm=None):
 		if db_id:
 			with get_cursor() as cur:
-				cur.execute("select id,score,gene,hmm from hits where id = %s;", (db_id,))
-				self._id, self._score, self._gene, self._hmm = cur.fetchone()
+				cur.execute("select id,score,gene,hmm,hitseq from hits where id = %s;", (db_id,))
+				self._id, self._score, self._gene, self._hmm,self._seq = cur.fetchone()
 		else:
+			self._seq = seq
 			self._score = score
 			self._hmm = hmm
 			self._gene = gene.is_real()
@@ -395,14 +396,14 @@ class Hit(dbThing):
 	@cursor_required
 	def save(self, cur=None):
 		if not self.is_real():
-			cur.execute("insert into hits (score,gene,hmm) values (%s,%s,%s);", (self._score, self._gene, self._hmm))
+			cur.execute("insert into hits (score,gene,hmm,hitseq) values (%s,%s,%s,%s);", (self._score, self._gene, self._hmm,self._seq))
 			self._id = cur.lastrowid
 
 	@staticmethod
 	def _save_many(hits_iterable):
 		with get_cursor() as cur:
-			tuples = [(x._score,x._gene,x._hmm) for x in hits_iterable]
-			cur.executemany("insert into hits (score,gene,hmm) values (%s,%s,%s);",tuples)
+			tuples = [(x._score,x._gene,x._hmm,x._seq) for x in hits_iterable]
+			cur.executemany("insert into hits (score,gene,hmm,hitseq) values (%s,%s,%s,%s);",tuples)
 
 	@cursor_required
 	def is_real(self, cur=None):
