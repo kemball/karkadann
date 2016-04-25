@@ -417,6 +417,10 @@ class Hit(dbThing):
 	def score(self):
 		return self._score
 
+	@property
+	def seq(self):
+		return self._seq
+
 
 class Cluster(dbThing):
 

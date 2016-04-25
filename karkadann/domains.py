@@ -132,6 +132,7 @@ def assign_groups(genes):
 
 def ortho_score(clustera, clusterb, batch=most_recent_batch()):
 	total_genes = len(clustera.gene_list)+len( clusterb.gene_list)
+	assert(total_genes > 2)
 	orthogroups_a = defaultdict(int)
 	for gene in clustera.gene_list:
 		orthogroups_a[gene.orthogroup(batch=batch)] += 1

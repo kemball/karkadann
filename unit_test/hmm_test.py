@@ -21,8 +21,15 @@ class ProfileTest(ut.TestCase):
 		for a in assems:
 			contigs = a.contigs()
 			for c in contigs:
-				genes = c.genes()
+				genes = list(c.genes())
 				profile(genes, ["AfsA"])
+				nhit = Hit(gene=genes[0],score=5,seq='LEET',hmm='notarealhmm')
+				nhit.save()
+				self.assertEqual(nhit.seq,'LEET')
+				self.assertEqual(nhit.score,5)
+				self.assertGreater(len(Hit.fetch(genes[0])),0)
+				nhit.delete()
+				self.assertFalse(nhit.is_real())
 			with get_cursor() as cur:
 				# there are guaranteed to be some.
 				# double checking that there's a hit from genes we just used is harder
@@ -48,8 +55,12 @@ class ProfileTest(ut.TestCase):
 
 class HmmTest(ut.TestCase):
 	# TODO add more of these
+
+
+
 	def test_list_hmms(self):
 		print "testing list_hmms"
 		self.assertTrue(list_hmms())
 		self.assertIn("AfsA", list_hmms())
 		print "there are %s hmms" % len(list_hmms())
+

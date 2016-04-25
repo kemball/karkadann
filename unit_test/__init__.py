@@ -5,5 +5,3 @@ from database_test import *
 from hmm_test import *
 from prodigal_test import *
 import unittest
-print "starting main unit unit_test"
-unittest.main()
