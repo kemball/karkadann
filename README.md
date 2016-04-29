@@ -40,10 +40,11 @@ If an exception is thrown database stuff will not be committed. In fact database
 
 
 
-####`Genome(db_id,genome_name)`
+####`Genome(genome_name)`
 
-Creates a new Genome object. If created with a db_id, populates itself from the database. If created with a genome_name, represents an unsaved Genome. 
+Creates a new Genome object. If created with a genome_name, represents an unsaved Genome. 
 
+* `.get(db_id)` Fetches a Genome object from the database by id.
 * `.save()` Saves the genome to the database.
 * `.delete()` Deletes the genome from the database. (Handles registered binomial names)
 * `.is_real()` Checks if the Genome has been saved to the database, and if so, returns its id.
@@ -52,21 +53,23 @@ Creates a new Genome object. If created with a db_id, populates itself from the 
 
 `Genome.fetch(genome_name)` fetches and populates a Genome object from the database and returns it.
 
-####`Assembly(db_id)` or `Assembly(records,genome_id,)`
+#### `Assembly(records,genome_id,)`
 
-Creates a new Assembly object. if created with a db_id, populates itself. If created with a records iterable and a genome object, makes a new unsaved Assembly object.
+Creates a new Assembly object.  If created with a records iterable and a genome object, makes a new unsaved Assembly object.
 
+* `.get(db_id)` Fetches an Assembly object from the database by id.
 * `.save()` Saves the assembly to the database.
 * `.delete()` Deletes the assembly from the database. (Handles the gbfile backup)
 * `.is_real()` Checks if the Assembly has been saved to the database, and if so, returns its id.
 * `.is_record()` Returns an iterator over the gbfile underneath.
 * `.save_record()` Helper function to generate portable filenames that aren't used yet for saving the genbank records. You shouldn't need this at all.
-* `.contigs()` Returns a list of contigs in this assembly.
+* `.contigs()` Returns a generator of contigs in this assembly.
 
 `Assembly.fetch(genome_id)` fetches a list of assemblies based on the genome_id. 99% of the time there won't be more than one but the database supports that on purpose, so it doesn't make sense to ignore it here.
 
-####`Contig(db_id)` or `Contig(seq,assembly,accession)`
+####`Contig(seq,assembly,accession)`
 
+* `.get(db_id)` Fetches a Contig from the database by id.
 * `.save()` Saves the Contig
 * `.delete()` Deletes the contig from the database. (handles genes correctly)
 * `.is_real()` Checks if the Contig has been saved to the database, and if so, returns its id.
@@ -74,8 +77,9 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.acc()` Returns the accession number for the contig.
 * `.genes()` Returns a generator of the Genes in the contig.
 
-####`Gene(db_id)` or `Gene(translation,contig,start,end,strand,accession)`
+####`Gene(translation,contig,start,end,strand,accession)`
 
+* `.get(db_id)` Fetches a Gene from the database by id.
 * `.save()` Saves the Gene to the database.
 * `.delete()` Deletes the gene from the database.
 * `.is_real()` Checks if the Gene has been saved, and if so returns its id.
@@ -83,16 +87,18 @@ Creates a new Assembly object. if created with a db_id, populates itself. If cre
 * `.translation` Returns the AA sequence for the Gene.
 * `.orthogroup` Returns a string representing the orthogroup this gene belongs to. A property. `.orthogroup(batch=batchnum)` will return the orthogroup string for that particular batch.
 
-####`Hit(db_id)` or `Hit(Gene,score,hmm)`
+####`Hit(Gene,score,hmm)`
 
+* `.get(db_id)` Fetches a Hit from the database by id.
 * `.save()` Saves the hit to the database.
 * `.delete()` Deletes the hit from the database.
 * `.is_real()` Checks if the hit has been saved, and if so returns its id.
 * `.score` Pseudoproperty. Returns the bitscore of the hit.
 
-####`Cluster(db_id) or Cluster(gene_list,classification)`
+####`Cluster(gene_list,classification)`
 Reads a cluster from the database or makes a new one from a classification and a gene_list. The id isn't numeric but a string based on its classification and the number of existing clusters.
 
+* `.get(db_id)` Fetches a cluster object from the database
 * `.save()` Saves the cluster to the database.
 * `.delete()` Deletes the cluster from the database.
 * `.is_real()` Checks if the cluster has been saved, and if so returns its id.

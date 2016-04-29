@@ -1,8 +1,7 @@
 import ConfigParser
 import MySQLdb as mysql
 import os
-import threading
-import Queue
+
 from Bio.Alphabet import IUPAC
 
 from Bio import SeqFeature
@@ -38,8 +37,6 @@ if not os.access(hmm_location, os.R_OK):
 	os.mkdir(hmm_location)
 
 
-
-
 @contextmanager
 def get_cursor():
 	"""returns a cursor that can have .execute and .fetchall and so on called on it in a thread-safe way"""
@@ -63,17 +60,6 @@ def get_cursor():
 	# it does goddamn work tho
 
 
-class dbThing:
-	def save(self, cur=None):
-		raise NotImplementedError
-
-	def is_real(self, cur=None):
-		raise NotImplementedError
-
-	def delete(self, cur=None):
-		raise NotImplementedError
-
-
 def cursor_required(f):
 	# this also bears some explaining. Quite a few of the .save methods
 	# and suchlike need a cursor to the database, but it's pretty inefficient
@@ -94,25 +80,46 @@ def cursor_required(f):
 	return cursored_fxn
 
 
+class dbThing(object):
+	def save(self, cur=None):
+		raise NotImplementedError
+
+	def is_real(self, cur=None):
+		raise NotImplementedError
+
+	def delete(self, cur=None):
+		raise NotImplementedError
+
+	@classmethod
+	def get(cls, db_id):
+		return cls.get_many([db_id]).next()
+
+	@classmethod
+	def get_many(cls, db_ids):
+		raise NotImplementedError
+
+
 class Genome(dbThing):
 	@classmethod
 	def fetch(cls, genome_name):
 		with get_cursor() as cur:
 			cur.execute("select id from genomes where name = %s;", (genome_name,))
-			return Genome(db_id=cur.fetchone()[0])
+			return Genome.get(cur.fetchone()[0])
 
-	def __init__(self, db_id=None, genome_name=None):
-		if db_id:
-			with get_cursor() as cur:
-				cur.execute("select name,added from genomes where id = %s;", (db_id,))
-				self._id = db_id
-				self._name = cur.fetchone()[0]
-			if genome_name and self._name is not genome_name:
-				raise KeyError("Genome %s already exists with id %s." % (self._name, self._id))
-		else:
-			self._name = genome_name
-			self._id = None
-			self._added = None
+	@classmethod
+	def get_many(cls, db_ids):
+		with get_cursor() as cur:
+			for db_id in db_ids:
+				cur.execute("select id,name,added from genomes where id = %s;", (db_id,))
+				gid, name, added = cur.fetchone()
+				ng = Genome()
+				ng._id,ng._name, ng._added = gid,name, added
+				yield ng
+
+	def __init__(self, genome_name=None):
+		self._name = genome_name
+		self._id = None
+		self._added = None
 
 	@cursor_required
 	def save(self, cur=None):
@@ -123,7 +130,7 @@ class Genome(dbThing):
 	@cursor_required
 	def delete(self, cur=None):
 		if self.is_real(cur=cur):
-			for assem in self.assemblies(cur=cur):
+			for assem in self.assemblies():
 				assem.delete(cur=cur)
 			cur.execute("delete from genomes where id = %s;", (self._id,))
 
@@ -139,8 +146,8 @@ class Genome(dbThing):
 	def added(self, cur=None):
 		if self.is_real(cur=cur):
 			cur.execute("select added from genomes where id =%s;", (self._id,))
-		for result in cur.fetchall():
-			return result
+			for result in cur.fetchall():
+				return result
 
 	@cursor_required
 	def binomial(self, binomial=None, cur=None, ):
@@ -150,34 +157,39 @@ class Genome(dbThing):
 			cur.execute("select binomial from genus_species where genome_id=%s;", (self._id,))
 			return cur.fetchone()[0]
 
-	@cursor_required
-	def assemblies(self, cur=None):
-		if self.is_real(cur=cur):
-			cur.execute("select id from assemblies where genome_id = %s;", (self._id,))
-			ids = list(cur.fetchall())
-			return (Assembly(db_id=x) for (x,) in ids)
+
+	def assemblies(self):
+		with get_cursor() as cur:
+			if self.is_real(cur=cur):
+				cur.execute("select id from assemblies where genome_id = %s;", (self._id,))
+				ids = list([x for (x,) in cur.fetchall()])
+				return Assembly.get_many(ids)
 
 
 class Assembly(dbThing):
-	def __init__(self, record=None, genome=None, fastq=None, assembled=None, accession=None, db_id=None):
-		if db_id:
-			with get_cursor() as cur:
+	def __init__(self, record=None, genome=None, fastq=None, assembled=None, accession=None):
+		self._id = None
+		self._gb = record and Assembly.save_record(record) or None
+		self._genome_id = genome and genome.is_real() or None
+		self._fastq = fastq
+		self._assembled = assembled
+		self._acc = accession or ""
+
+	@classmethod
+	def get_many(cls, db_ids):
+		with get_cursor() as cur:
+			for db_id in db_ids:
 				cur.execute("select * from assemblies where id = %s;", (db_id,))
-				self._id, self._gb, self._fastq, self._assembled, self._genome_id, self._acc = cur.fetchone()
-		else:
-			self._id = None
-			self._gb = Assembly.save_record(record)
-			self._genome_id = genome.is_real()
-			self._fastq = fastq
-			self._assembled = assembled
-			self._acc = accession or ""
+				nself = cls()
+				nself._id, nself._gb, nself._fastq, nself._assembled, nself._genome_id, nself._acc = cur.fetchone()
+				yield nself
 
 	@classmethod
 	@cursor_required
 	def fetch(cls, genome_id, cur=None):
 		cur.execute("select id from assemblies where genome_id = %s;", (genome_id,))
-		aid = cur.fetchall()
-		return [Assembly(db_id=x) for (x,) in aid]
+		aid = [x for (x,) in cur.fetchall()]
+		return list(Assembly.get_many(aid))
 
 	@cursor_required
 	def save(self, cur=None):
@@ -200,7 +212,7 @@ class Assembly(dbThing):
 	def delete(self, cur=None):
 
 		if self.is_real(cur=cur):
-			cur.execute("delete from assemblies where id =%s;", (self._id))
+			cur.execute("delete from assemblies where id =%s;", (self._id,))
 			os.remove(os.path.join(gb_location, self._gb))
 
 	@cursor_required
@@ -215,7 +227,7 @@ class Assembly(dbThing):
 		if self.is_real(cur=cur):
 			cur.execute("select id from contigs where assembly_id=%s;", (self._id,))
 			results = cur.fetchall()
-			return (Contig(db_id=x[0]) for x in results)
+			return (Contig.get(db_id=x[0]) for x in results)
 
 	@staticmethod
 	def save_record(record, salt=None):
@@ -232,15 +244,19 @@ class Assembly(dbThing):
 
 
 class Contig(dbThing):
-	def __init__(self, seq=None, assembly=None, accession=None, db_id=None):
-			if db_id:
-				with get_cursor() as cur:
-					cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;", (db_id,))
-					self._id, self._seq, self._assembly_id, self._acc = cur.fetchone()
-			else:
-				self._seq = seq
-				self._assembly_id = assembly.is_real()
-				self._acc = accession or ""
+	def __init__(self, seq=None, assembly=None, accession=None):
+		self._seq = seq
+		self._assembly_id = assembly and assembly.is_real() or None
+		self._acc = accession or ""
+
+	@classmethod
+	def get_many(cls, db_ids):
+		with get_cursor() as cur:
+			for db_id in db_ids:
+				cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;", (db_id,))
+				ncont = cls()
+				ncont._id, ncont._seq, ncont._assembly_id, ncont._acc = cur.fetchone()
+				yield ncont
 
 	@cursor_required
 	def save(self, cur=None):
@@ -274,32 +290,45 @@ class Contig(dbThing):
 	def genes(self, cur=None):
 		if self.is_real(cur=cur):
 			cur.execute("select id from genes where contig = %s order by start;", (self._id,))
-			return (Gene(db_id=x) for (x,) in cur.fetchall())
+			return Gene.get_many([x for (x,) in cur.fetchall()])
 
 
 class Gene(dbThing):
-	def __init__(self, db_id=None,
+	def __init__(self,
 	             translation=None,
 	             contig=None,
 	             start=None,
 	             end=None,
 	             strand=None,
 	             accession=None):
-		if db_id:
-			with get_cursor() as cur:
-				cur.execute("select id,translation,contig,start,end,strand,accession from genes where id=%s;", (db_id,))
-				self._id, self._translation, self._contig, self._start, self._end, self._strand, self._acc = cur.fetchone()
-			self._start = int(self._start)
-			self._end = int(self._end)
-			self._strand = int(self._strand)
-		else:
-			self._id = None
-			self._translation = translation
-			self._contig = contig.is_real()
-			self._start = start
-			self._end = end
-			self._strand = strand
-			self._acc = accession or ""
+		self._id = None
+		self._translation = translation
+		self._contig = contig and contig.is_real() or None
+		self._start = start
+		self._end = end
+		self._strand = strand
+		self._acc = accession or ""
+
+	@classmethod
+	def get_many(cls, db_ids):
+		if not len(db_ids):
+			return
+		with get_cursor() as cur:
+			query = "select id,translation,contig,start,end,strand,accession from genes where id in (%s);"
+			query %= ",".join(['%s']*len(db_ids))
+			try:
+				cur.execute(query,tuple(db_ids))
+			except:
+				print "something went wrong??"
+				print query%tuple(db_ids)
+				raise
+			for res in cur.fetchall():
+				ng = Gene()
+				ng._id, ng._translation, ng._contig, ng._start, ng._end, ng._strand, ng._acc = res
+				ng._start = int(ng._start)
+				ng._end = int(ng._end)
+				ng._strand = int(ng._strand)
+				yield ng
 
 	@cursor_required
 	def save(self, cur=None):
@@ -312,9 +341,10 @@ class Gene(dbThing):
 	@staticmethod
 	def _save_many(genes_iterable):
 		with get_cursor() as cur:
-			tuples = [(x._translation,x._start,x._end,x._strand,x._contig,x._acc) for x in genes_iterable]
-			cur.executemany("insert into genes (translation, start, end, strand, contig, accession) values (%s,%s,%s,%s,%s,%s);",
-			                tuples)
+			tuples = [(x._translation, x._start, x._end, x._strand, x._contig, x._acc) for x in genes_iterable]
+			cur.executemany(
+				"insert into genes (translation, start, end, strand, contig, accession) values (%s,%s,%s,%s,%s,%s);",
+				tuples)
 
 	@cursor_required
 	def is_real(self, cur=None):
@@ -350,7 +380,7 @@ class Gene(dbThing):
 
 	@property
 	def record(self):
-		return SeqRecord.SeqRecord(id="%s|%s_%s"%(self._contig,self._contig, self._id),
+		return SeqRecord.SeqRecord(id="%s|%s_%s" % (self._contig, self._contig, self._id),
 		                           seq=Seq(self._translation, alphabet=IUPAC.protein))
 
 	def hit_scores(self):
@@ -358,36 +388,41 @@ class Gene(dbThing):
 			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))
 			return list(cur.fetchall())
 
-	def orthogroup(self,batch=None):
+	def orthogroup(self, batch=None):
 		if self.is_real():
 			with get_cursor() as cur:
 				if not batch:
 					batch = most_recent_batch(cur=cur)
-				cur.execute("select `group_name` from orthogroups where gene =%s and batch=%s;",(self._id,batch))
+				cur.execute("select `group_name` from orthogroups where gene =%s and batch=%s;", (self._id, batch))
 				for result in cur:
 					return result[0]
 		else:
 			return ""
 
+
 class Hit(dbThing):
-	def __init__(self, db_id=None, gene=None, score=None,seq=None, hmm=None):
-		if db_id:
-			with get_cursor() as cur:
+	def __init__(self, gene=None, score=None, seq=None, hmm=None):
+		self._seq = seq
+		self._score = score
+		self._hmm = hmm
+		self._gene = gene and gene.is_real() or None
+		self._id = None
+
+	@classmethod
+	def get_many(cls, db_ids):
+		with get_cursor() as cur:
+			for db_id in db_ids:
 				cur.execute("select id,score,gene,hmm,hitseq from hits where id = %s;", (db_id,))
-				self._id, self._score, self._gene, self._hmm,self._seq = cur.fetchone()
-		else:
-			self._seq = seq
-			self._score = score
-			self._hmm = hmm
-			self._gene = gene.is_real()
-			self._id = None
+				nhit = Hit()
+				nhit._id,nhit._score,nhit._gene,nhit._hmm,nhit._seq = cur.fetchone()
+				yield nhit
 
 	# TODO redundant with gene.hit_scores but not sure which is better.
 	@classmethod
 	def fetch(cls, gene):
 		with get_cursor() as cur:
-			cur.execute("select id from hits where gene = %s;",(gene.is_real(),))
-			return [Hit(db_id=x) for (x,) in cur.fetchall()]
+			cur.execute("select id from hits where gene = %s;", (gene.is_real(),))
+			return list(Hit.get_many([x for (x,) in cur.fetchall()]))
 
 	@cursor_required
 	def delete(self, cur=None):
@@ -396,14 +431,15 @@ class Hit(dbThing):
 	@cursor_required
 	def save(self, cur=None):
 		if not self.is_real():
-			cur.execute("insert into hits (score,gene,hmm,hitseq) values (%s,%s,%s,%s);", (self._score, self._gene, self._hmm,self._seq))
+			cur.execute("insert into hits (score,gene,hmm,hitseq) values (%s,%s,%s,%s);",
+			            (self._score, self._gene, self._hmm, self._seq))
 			self._id = cur.lastrowid
 
 	@staticmethod
 	def _save_many(hits_iterable):
 		with get_cursor() as cur:
-			tuples = [(x._score,x._gene,x._hmm,x._seq) for x in hits_iterable]
-			cur.executemany("insert into hits (score,gene,hmm,hitseq) values (%s,%s,%s,%s);",tuples)
+			tuples = [(x._score, x._gene, x._hmm, x._seq) for x in hits_iterable]
+			cur.executemany("insert into hits (score,gene,hmm,hitseq) values (%s,%s,%s,%s);", tuples)
 
 	@cursor_required
 	def is_real(self, cur=None):
@@ -423,21 +459,26 @@ class Hit(dbThing):
 
 
 class Cluster(dbThing):
+	def __init__(self, gene_list=[], classification=None):
 
-	def __init__(self,db_id=None, gene_list=None, classification=None):
-		if db_id:
-			self._gene_list = []
-			with get_cursor() as cur:
+		self._gene_list = gene_list
+		self._id = None
+		self._kind = classification
+
+	@classmethod
+	def get_many(cls, db_ids):
+		with get_cursor() as cur:
+			for db_id in db_ids:
+				ncl = Cluster()
 				cur.execute("select gene,classification from clusters where id = %s;", (db_id,))
-				for g,c in cur.fetchall():
-					self._gene_list.append(Gene(db_id=g))
-					if c:
-						self._kind = c
-				self._id = db_id
-		else:
-			self._gene_list = gene_list
-			self._id = None
-			self._kind = classification
+				gids = []
+				for g, c in cur.fetchall():
+						gids.append(g)
+						if c:
+							ncl._kind = c
+				ncl._gene_list = list(Gene.get_many(gids))
+				ncl._id = db_id
+				yield ncl
 
 	@property
 	def gene_list(self):
@@ -460,17 +501,16 @@ class Cluster(dbThing):
 			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self._gene_list[0].is_real(),))
 			genome_id = cur.fetchone()[0]
 			# TODO munge this for uniqueness and QOL
-			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (self._kind,genome_id))
+			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (self._kind, genome_id))
 			self._id = cur.lastrowid
 			for gene in self._gene_list:
 				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
-				                (self._id, self._kind, gene.is_real()))
+				            (self._id, self._kind, gene.is_real()))
 
 	@cursor_required
 	def delete(self, cur=None):
 		if self.is_real():
 			cur.execute("delete from cluster_names where id = %s;", (self._id,))
-
 
 	@cursor_required
 	def faa(self, cur=None):
@@ -479,10 +519,11 @@ class Cluster(dbThing):
 			            "genes join clusters on "
 			            "genes.id=clusters.gene where clusters.id=%s order by genes.start;",
 			            (self._id,))
-			return [SeqRecord.SeqRecord(id=str(gene_id),seq=Seq(trans,alphabet=IUPAC.protein)) for gene_id,trans in cur.fetchall()]
+			return [SeqRecord.SeqRecord(id=str(gene_id), seq=Seq(trans, alphabet=IUPAC.protein)) for gene_id, trans in
+			        cur.fetchall()]
 
 	@cursor_required
-	def fna(self,cur=None):
+	def fna(self, cur=None):
 		if self.is_real(cur=cur):
 			beginning = min([gene.location.start for gene in self._gene_list])
 			end = max([gene.location.end for gene in self._gene_list])

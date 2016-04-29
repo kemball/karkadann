@@ -30,7 +30,7 @@ class GenomeTest(ut.TestCase):
 	def test_make_insane_genome(self):
 
 		with self.assertRaises(Exception):
-			Genome(db_id=42)
+			Genome.get(42)
 
 	def test_fetch_genome(self):
 		newgenome = Genome(genome_name="testgenome")
@@ -58,7 +58,7 @@ class GenomeTest(ut.TestCase):
 		newgenome.save()
 		try:
 			gid = newgenome.is_real()
-			othergenome = Genome(db_id=gid)
+			othergenome = Genome.get(gid)
 			self.assertEqual(newgenome.added(), othergenome.added())
 			self.assertEqual(gid, newgenome.is_real())
 		finally:
@@ -293,7 +293,7 @@ class GeneTest(ut.TestCase):
 		                 strand=-1,
 		                 accession="WP_1337.1")
 		test_gene.save()
-		other_gene = Gene(db_id=test_gene.is_real())
+		other_gene = Gene.get(test_gene.is_real())
 		try:
 			self.assertEqual(test_gene.is_real(), other_gene.is_real())
 			self.assertEqual(test_gene.__dict__, other_gene.__dict__)
@@ -336,7 +336,7 @@ class HitTest(ut.TestCase):
 			newhit.save()
 			self.assertTrue(newhit.is_real())
 			self.assertEqual(5, newhit.score)
-			otherhit = Hit(db_id=newhit.is_real())
+			otherhit = Hit.get(newhit.is_real())
 			self.assertEqual(otherhit.score, newhit.score)
 			otherhit.save()
 			self.assertEqual(otherhit.is_real(), newhit.is_real())
@@ -371,7 +371,7 @@ class ClusterTest(ut.TestCase):
 		try:
 			newcluster.save()
 			self.assertTrue(newcluster.is_real())
-			othercluster = Cluster(db_id=newcluster.is_real())
+			othercluster = Cluster.get(db_id=newcluster.is_real())
 			self.assertTrue(othercluster.is_real())
 			self.assertEqual(newcluster._kind, othercluster._kind)
 			self.assertEqual(newcluster._kind, 'testclass')
@@ -395,11 +395,12 @@ class ClusterTest(ut.TestCase):
 			newcluster.delete()
 
 	def test_get_faa(self):
-		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass")
+		glist = list(self.contig.genes())
+		newcluster = Cluster(gene_list=glist, classification="testclass")
 		newcluster.save()
 		try:
 			records = newcluster.faa()
-			othercluster = Cluster(db_id=newcluster.is_real())
+			othercluster = Cluster.get(db_id=newcluster.is_real())
 			otherrecords = othercluster.faa()
 			self.assertEqual(othercluster._kind,newcluster._kind)
 			self.assertEqual(othercluster._kind,'testclass')

@@ -102,12 +102,13 @@ def call_clusters(contig):
 	for kind in clusters.keys():
 		for genes in clusters[kind]:
 			if len(genes):
-				if len(genes)==1:
+				if len(genes)<=1:
 					print "single-gene cluster on contig  %s of type %s" %(genes[0]._contig,kind)
 					print "discarding because this kind of thing is rarely useful."
-				new_cluster = Cluster(gene_list=genes, classification=kind)
-				new_cluster.save()
-				final_clusters.append(new_cluster)
+				else:
+					new_cluster = Cluster(gene_list=genes, classification=kind)
+					new_cluster.save()
+					final_clusters.append(new_cluster)
 	return final_clusters
 
 

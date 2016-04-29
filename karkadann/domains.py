@@ -119,7 +119,7 @@ def parse_groups(grouptext, batch=None):
 		genes = re.findall('(\d+)\|\d+_\d+', line)
 		for gene in genes:
 			gene_id = int(gene)
-			save_orthogroup(Gene(db_id=gene_id), orthogroup, batch)
+			save_orthogroup(Gene.get(gene_id), orthogroup, batch)
 
 
 def assign_groups(genes):
@@ -130,9 +130,13 @@ def assign_groups(genes):
 	parse_groups(gtext, batch=newbatch)
 
 
-def ortho_score(clustera, clusterb, batch=most_recent_batch()):
+def ortho_score(clustera, clusterb, batch=None):
+	if not batch:
+		batch = most_recent_batch()
 	total_genes = len(clustera.gene_list)+len( clusterb.gene_list)
-	assert(total_genes > 2)
+	if total_genes <=2:
+		print "cluster a %s and cluster b %s have not enough genes between them. " % (clustera.is_real(),clusterb.is_real())
+		return 0
 	orthogroups_a = defaultdict(int)
 	for gene in clustera.gene_list:
 		orthogroups_a[gene.orthogroup(batch=batch)] += 1

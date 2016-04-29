@@ -10,6 +10,7 @@ import os
 from random import sample
 from string import ascii_lowercase
 
+
 list_of_culture_collections = [
 	"DSM",
 	"NRRL",
@@ -17,13 +18,11 @@ list_of_culture_collections = [
 	"SCGC"
 ]
 
-
 def _slug(text, aggressiveness=2):
 	# check for allcaps+numbers words?
-	# those are usually strain names...
-	# Really should put culture collection hints into the names table. *shrug*.
+	# those are usually strain names or culture collections
 	# TODO put culture collection hitns into the names table.
-	if aggressiveness > 7:
+	if aggressiveness > 24:
 		return _slug(text, aggressiveness=7) + "".join(sample(ascii_lowercase, 5))
 	m = re.search(r'\s([A-Z0-9]+)\s', text)
 	if m and aggressiveness == 2 and m.group().strip() not in list_of_culture_collections:

@@ -10,9 +10,9 @@ from karkadann.domains import assign_groups, ortho_score
 from itertools import combinations
 
 p = mp.Pool(maxtasksperchild=10)
-"""
+
 files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb", shell=True).split()
-files = files[0:100]
+files = files[0:50]
 
 before = time()
 genomes = p.map(assimilate_from_ncbi, files)  # genomes is a map object
@@ -35,12 +35,13 @@ with get_cursor() as cur:
 	allgenesinvolved = [Gene(db_id=x) for (x,) in cur.fetchall()]
 before = time()
 assign_groups(allgenesinvolved)
-print "assigning groups takes %s seconds" % (time() - before)"""
+print "assigning groups takes %s seconds" % (time() - before)
 
 
 with get_cursor() as cur:
-	cur.execute("select id from assemblies;")
-	assems = [Assembly(db_id=x) for (x,) in cur.fetchall()]
+	cur.execute("select id from assemblies limit 10;")
+	results = cur.fetchall()
+assems =Assembly.get_many( [x for (x,) in results])
 
 def contig_flat(assemblylist):
 	for assembly in assemblylist:
@@ -51,12 +52,13 @@ def contig_flat(assemblylist):
 listcontigs = list(contig_flat(assems))
 print len(listcontigs)
 before = time()
+
 clusts = p.map(call_clusters, listcontigs)
 print "parallel cluster calling takes %s seconds or %s seconds per" % ((time() - before),
                                                                        (time() - before) / len(listcontigs))
 
 
-
+p.close()
 
 def splat_promer(args):
 	x = promer_score(*args)
@@ -65,7 +67,8 @@ def splat_promer(args):
 def splat_domain(args):
 	x = ortho_score(*args)
 
-np = mp.Pool(maxtasksperchild=100)
+np = mp.Pool(maxtasksperchild=10)
+
 #
 with get_cursor() as cur:
 	cur.execute("select distinct classification from clusters;")
@@ -75,7 +78,7 @@ for (clustertype,) in clusterlist:
 		arglist = []
 		cur.execute("select distinct id from clusters where classification=%s;", (clustertype,))
 		results = cur.fetchall()
-	clustsbytype = [Cluster(db_id=x) for (x,) in results]
+	clustsbytype = Cluster.get_many([x for (x,) in results])
 	if len(clustsbytype) < 2:
 		continue
 	# well we can't very well compare a cluster to itself now can we.

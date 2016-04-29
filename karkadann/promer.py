@@ -40,6 +40,7 @@ def promer_score(clustera, clusterb):
 	if ida==idb:
 		return 1
 	if not ida or not idb:
+		print "raising valuerror"
 		raise ValueError("scoring unreal clusters is impossible")
 	# enforce ida<idb
 	ida,idb = min(ida,idb),max(ida,idb)

@@ -11,7 +11,6 @@ from database import hmm_location, Hit, Gene
 
 
 def _call_hmmer(hmm, inputproteins):
-	# TODO, save HSPS from this for uclust.
 	inputproteins = list(inputproteins)
 	scores = {}
 	for ip in inputproteins:
@@ -35,10 +34,12 @@ def _call_hmmer(hmm, inputproteins):
 					scores[hit.id] = max(scores[hit.id], hit.bitscore)
 					for hsp in hit.hsps:
 						def appropriate_hyphens(m):
-							return '-'*len(m.group(0))
-						yield hit.id,hsp.bitscore,re.sub('PPPPP+',appropriate_hyphens,hsp.hit.seq)
+							return '-' * len(m.group(0))
+
+						if len(hsp.hit.seq) > 100:
+							yield hit.id, hsp.bitscore, re.sub('PPPPP+', appropriate_hyphens, str(hsp.hit.seq))
 						# this is the alignment with the --- in. I wonder if that's an issue.
-						# On the one hand, it can't be, prolines would trigger -----+
+						# On the one hand, it can't be, prolines become -----+
 
 
 
@@ -55,7 +56,7 @@ def profile(genes, hmms):
 		semaphore.acquire()
 		hit_list = []
 		for gene_id, score,sequence in _call_hmmer(hmm, miniprot):
-			new_hit = Hit(gene=Gene(db_id=int(gene_id)), score=score,seq=sequence, hmm=hmm)
+			new_hit = Hit(gene=Gene.get(gene_id), score=score,seq=sequence, hmm=hmm)
 			if score > 0:
 				hit_list.append(new_hit)
 		Hit._save_many(hit_list)

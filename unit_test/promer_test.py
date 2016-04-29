@@ -31,8 +31,8 @@ class PromerTest(ut.TestCase):
 			cur.execute("select distinct id from clusters limit 2;")
 			one_id = cur.fetchone()[0]
 			two_id = cur.fetchone()[0]
-		one = Cluster(db_id=one_id)
-		two = Cluster(db_id=two_id)
+		one = Cluster.get(db_id=one_id)
+		two = Cluster.get(db_id=two_id)
 		score = promer_score(one, two)
 		self.assertGreaterEqual(score, 0)
 		self.assertLessEqual(score, 1)

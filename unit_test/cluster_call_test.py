@@ -1,5 +1,6 @@
 from karkadann.cluster_call import _classify
 from karkadann.cluster_call import *
+from karkadann.database import get_cursor
 import unittest as ut
 from time import time
 
@@ -35,6 +36,15 @@ class ClassifyTest(ut.TestCase):
 			before = time()
 			call_clusters(contig)
 			print "calling clusters in a single contig takes %s seconds " % (time() - before)
+		for contig in ClassifyTest.contigs:
+			with get_cursor() as cur:
+				cur.execute("select distinct clusters.id as clust_id,(select count(*) from clusters where id=clust_id) from clusters join genes on genes.id=clusters.gene join contigs on genes.contig=contigs.id where contigs.id=%s;",(contig.is_real(),))
+				for (clust_id,sum) in cur.fetchall():
+					self.assertGreater(sum,1)
+			print "good, no singleton clusters."
+
+
+
 
 
 
