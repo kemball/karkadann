@@ -6,6 +6,7 @@ from Bio.Alphabet import IUPAC
 
 from Bio import SeqFeature
 from Bio import SeqIO, SeqRecord
+from Bio.Seq import Seq
 from contextlib import contextmanager
 
 from Bio.Seq import Seq
@@ -36,6 +37,12 @@ hmm_location = os.path.join(data_location, 'hmm')
 if not os.access(hmm_location, os.R_OK):
 	os.mkdir(hmm_location)
 
+import multiprocessing
+# TODO: a config option for this.
+try:
+	num_cores = multiprocessing.cpu_count()
+except NotImplementedError:
+	num_cores = 5
 
 @contextmanager
 def get_cursor():
@@ -383,10 +390,11 @@ class Gene(dbThing):
 		return SeqRecord.SeqRecord(id="%s|%s_%s" % (self._contig, self._contig, self._id),
 		                           seq=Seq(self._translation, alphabet=IUPAC.protein))
 
-	def hit_scores(self):
+
+	def hits(self):
 		with get_cursor() as cur:
-			cur.execute("select score,hmm from hits where gene = %s;", (self.is_real(),))
-			return list(cur.fetchall())
+			cur.execute("select id from hits where gene = %s;",(self.is_real(),))
+			return list(Hit.get_many([x for (x,) in cur.fetchall()]))
 
 	def orthogroup(self, batch=None):
 		if self.is_real():
@@ -402,7 +410,7 @@ class Gene(dbThing):
 
 class Hit(dbThing):
 	def __init__(self, gene=None, score=None, seq=None, hmm=None):
-		self._seq = seq
+		self._seq = seq and Seq(seq,IUPAC.protein)
 		self._score = score
 		self._hmm = hmm
 		self._gene = gene and gene.is_real() or None
@@ -410,14 +418,25 @@ class Hit(dbThing):
 
 	@classmethod
 	def get_many(cls, db_ids):
+		if not db_ids:
+			return
 		with get_cursor() as cur:
-			for db_id in db_ids:
-				cur.execute("select id,score,gene,hmm,hitseq from hits where id = %s;", (db_id,))
-				nhit = Hit()
-				nhit._id,nhit._score,nhit._gene,nhit._hmm,nhit._seq = cur.fetchone()
+			query = "select id,score,gene,hmm,hitseq from hits where id in (%s);"
+			query %= ",".join(['%s']*len(db_ids))
+			try:
+				cur.execute(query,tuple(db_ids))
+			except:
+				print query%tuple(db_ids)
+				print "PANIC SOMETHING BAD HAPPENED"
+				raise
+			for (ID,SCORE,GENE,HMM,SEQ) in cur.fetchall():
+				nhit = Hit(score=SCORE, seq=SEQ,hmm=HMM)
+				# An additional dependence?
+				# TODO think a little bit about whether ._gene and the like should be integers or Genes.
+				nhit._gene = GENE
+				nhit._id= ID
 				yield nhit
 
-	# TODO redundant with gene.hit_scores but not sure which is better.
 	@classmethod
 	def fetch(cls, gene):
 		with get_cursor() as cur:
@@ -456,6 +475,10 @@ class Hit(dbThing):
 	@property
 	def seq(self):
 		return self._seq
+
+	@property
+	def hmm(self):
+		return self._hmm
 
 
 class Cluster(dbThing):

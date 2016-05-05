@@ -3,8 +3,8 @@ from collections import defaultdict
 
 def _classify(gene):
 	s = defaultdict(int)
-	for score, hmm in gene.hit_scores():
-		s[hmm] = score
+	for hit in gene.hits():
+		s[hit.hmm] = hit.score
 	PKS_KS = s["PKS_KS"]
 	if PKS_KS>50 and PKS_KS > s["bt1fas"] and PKS_KS > s["ft1fas"] and PKS_KS > s["hg1D"] and PKS_KS > s['hg1E'] and PKS_KS > s['fabH']:
 		return "PKS_I"

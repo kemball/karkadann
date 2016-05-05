@@ -12,7 +12,7 @@ from itertools import combinations
 p = mp.Pool(maxtasksperchild=10)
 
 files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb", shell=True).split()
-files = files[0:50]
+files = files[0:200]
 
 before = time()
 genomes = p.map(assimilate_from_ncbi, files)  # genomes is a map object
@@ -26,22 +26,19 @@ print "making list of assemblies took %s" % (time() - before)
 
 
 before = time()
-list(p.map(scan_assembly, assems))
+tinypool = mp.Pool(processes=2)
+# scan_assembly is internally threaded.
+list(tinypool.map(scan_assembly, assems))
 print "parallel scanning takes %s seconds, or %s seconds per" % ((time() - before),
                                                                  (time() - before) / len(assems))
 # this only does cluster-based genes which is a bit cheatz
-with get_cursor() as cur:
-	cur.execute("select distinct gene from clusters;")
-	allgenesinvolved = [Gene(db_id=x) for (x,) in cur.fetchall()]
-before = time()
-assign_groups(allgenesinvolved)
-print "assigning groups takes %s seconds" % (time() - before)
 
 
 with get_cursor() as cur:
 	cur.execute("select id from assemblies limit 10;")
 	results = cur.fetchall()
-assems =Assembly.get_many( [x for (x,) in results])
+assems = Assembly.get_many([x for (x,) in results])
+
 
 def contig_flat(assemblylist):
 	for assembly in assemblylist:
@@ -57,6 +54,13 @@ clusts = p.map(call_clusters, listcontigs)
 print "parallel cluster calling takes %s seconds or %s seconds per" % ((time() - before),
                                                                        (time() - before) / len(listcontigs))
 
+
+with get_cursor() as cur:
+	cur.execute("select distinct gene from clusters;")
+	allgenesinvolved = Gene.get_many([x for (x,) in cur.fetchall()])
+before = time()
+assign_groups(allgenesinvolved)
+print "assigning groups takes %s seconds" % (time() - before)
 
 p.close()
 
@@ -78,7 +82,7 @@ for (clustertype,) in clusterlist:
 		arglist = []
 		cur.execute("select distinct id from clusters where classification=%s;", (clustertype,))
 		results = cur.fetchall()
-	clustsbytype = Cluster.get_many([x for (x,) in results])
+	clustsbytype = list(Cluster.get_many([x for (x,) in results]))
 	if len(clustsbytype) < 2:
 		continue
 	# well we can't very well compare a cluster to itself now can we.

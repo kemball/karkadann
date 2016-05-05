@@ -252,7 +252,7 @@ class ContigTest(ut.TestCase):
 
 
 class GeneTest(ut.TestCase):
-	#TODO save_many unit_test
+	# TODO save_many unit_test
 	records = SeqIO.parse(os.path.join(data_location, 'test/testassem.gb'), 'genbank')
 	records = list(records)
 
@@ -301,22 +301,22 @@ class GeneTest(ut.TestCase):
 			test_gene.delete()
 
 	def test_record(self):
-		test_gene =  Gene(translation="MICHAELBIOLOGIST",
+		test_gene = Gene(translation="MICHAELBIOLOGIST",
 		                 contig=self.test_contig,
 		                 start=0,
 		                 end=2,
 		                 strand=-1,
 		                 accession="WP_1337.1")
 		test_gene.save()
-		SeqIO.write(test_gene.record,'foo.fasta','fasta')
-		round_rec = SeqIO.read('foo.fasta','fasta')
+		SeqIO.write(test_gene.record, 'foo.fasta', 'fasta')
+		round_rec = SeqIO.read('foo.fasta', 'fasta')
 		self.assertEqual(round_rec.id, test_gene.record.id)
-		self.assertEqual(round_rec.seq,test_gene.record.seq)
+		self.assertEqual(round_rec.seq, test_gene.record.seq)
 		os.remove('foo.fasta')
 
 
 class HitTest(ut.TestCase):
-	#TODO save_many unit_test
+	# TODO save_many unit_test
 
 	from karkadann.assimilate import assimilate_from_ncbi
 
@@ -331,7 +331,7 @@ class HitTest(ut.TestCase):
 
 	def test_make_hit(self):
 		gene = next(self.contig.genes())
-		newhit = Hit(gene=gene, score=5, hmm="testhmm")
+		newhit = Hit(gene=gene, score=5, hmm="testhmm", seq="ACDEFGHIKLMNPQRSTVWY")
 		try:
 			newhit.save()
 			self.assertTrue(newhit.is_real())
@@ -340,6 +340,7 @@ class HitTest(ut.TestCase):
 			self.assertEqual(otherhit.score, newhit.score)
 			otherhit.save()
 			self.assertEqual(otherhit.is_real(), newhit.is_real())
+			self.assertEqual(str(newhit._seq), "ACDEFGHIKLMNPQRSTVWY")
 		finally:
 			newhit.delete()
 
@@ -349,12 +350,13 @@ class HitTest(ut.TestCase):
 		try:
 			newhit.save()
 			otherhit = Hit.fetch(gene)
-			self.assertEqual(otherhit[0].is_real(),newhit.is_real())
+			self.assertEqual(otherhit[0].is_real(), newhit.is_real())
 		finally:
 			newhit.delete()
 
+
 class ClusterTest(ut.TestCase):
-	# TODO
+	# TODO save_many test
 
 	from karkadann.assimilate import assimilate_from_ncbi
 	testgbfile = os.path.join(data_location, 'test/testassem.gb')
@@ -386,11 +388,11 @@ class ClusterTest(ut.TestCase):
 			records = newcluster.fna()
 			from tempfile import NamedTemporaryFile as ntf
 			with ntf(mode='w', delete=True) as tempfile:
-				SeqIO.write(records,tempfile.name,'fasta')
-				roundtrip = SeqIO.parse(tempfile.name,'fasta')
+				SeqIO.write(records, tempfile.name, 'fasta')
+				roundtrip = SeqIO.parse(tempfile.name, 'fasta')
 				roundtrip = list(roundtrip)[0]
-				self.assertEqual(len(roundtrip) , len(records))
-				self.assertEqual(roundtrip.id , records.id)
+				self.assertEqual(len(roundtrip), len(records))
+				self.assertEqual(roundtrip.id, records.id)
 		finally:
 			newcluster.delete()
 
@@ -402,11 +404,11 @@ class ClusterTest(ut.TestCase):
 			records = newcluster.faa()
 			othercluster = Cluster.get(db_id=newcluster.is_real())
 			otherrecords = othercluster.faa()
-			self.assertEqual(othercluster._kind,newcluster._kind)
-			self.assertEqual(othercluster._kind,'testclass')
-			self.assertEqual(newcluster.is_real(),othercluster.is_real())
-			self.assertEqual(len(records),len(otherrecords))
-			self.assertEqual(str(records[0]),str(otherrecords[0]))
+			self.assertEqual(othercluster._kind, newcluster._kind)
+			self.assertEqual(othercluster._kind, 'testclass')
+			self.assertEqual(newcluster.is_real(), othercluster.is_real())
+			self.assertEqual(len(records), len(otherrecords))
+			self.assertEqual(str(records[0]), str(otherrecords[0]))
 		finally:
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())

@@ -10,13 +10,45 @@ import os
 from random import sample
 from string import ascii_lowercase
 
-
+#TODO cut over to YAML for this
+# http://www.wfcc.info/index.php/collections/display/
 list_of_culture_collections = [
 	"DSM",
 	"NRRL",
 	"ATCC",
-	"SCGC"
+	"SCGC",
+	"NBRC",
+	"BCCM",
+	"LMG",
+	"MCITM",
+	"NEPCC",
+	"CCBAU",
+	"CCTCC",
+	"CMMC",
+	"GDMCC",
+	"INRA",
+	"ITG",
+	"IFBM",
+	"MCC",
+	"MTCC",
+	"HUT",
+	"IAM",
+	"JCM",
+	"KMM",
+	"CCOS",
+	"CCTM",
+	"BSMB",
+	"WRL",
+	"NCIMB",
+	"NCTC",
+	"IMI",
+	"DSC",
+	"LMS",
+	"SRRC",
+	"USRCB"
+
 ]
+
 
 def _slug(text, aggressiveness=2):
 	# check for allcaps+numbers words?
@@ -118,15 +150,14 @@ def assimilate_from_ncbi(ncbifile):
 		newassem.save()
 		print "assembly for genome %s saved" % newgenome._name
 		_save_contigs(reannotated_record,newassem)
-		print "all contigs for genome %s saved" %newgenome._name
+		print "all contigs for genome %s saved" % newgenome._name
 
 	except:
 		newgenome.delete()
 		raise
 	return newgenome
 
-#TODO
-# Need a doroghazi importer
+# TODO Need a doroghazi importer
 
 
 def assimilate_from_fasta(fastafile):

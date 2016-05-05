@@ -6,8 +6,8 @@ from Bio import SeqIO
 from database import config, data_location
 from database import save_orthogroup, most_recent_batch, start_batch
 from database import Gene
+from database import num_cores
 import subprocess as sp
-import multiprocessing as mp
 import re
 from time import time
 from collections import defaultdict
@@ -18,14 +18,12 @@ password = config.get('orthomcl', 'password')
 db = config.get('orthomcl', 'dbname')
 mcl_location = sp.check_output('which mcl', shell=True).strip()
 
+
 # has to be sandboxed
 def cycle_blast(input="goodProteins.fasta"):
 	format_proc = sp.Popen("formatdb -t cluster -i %s -p T -n cluster"%input,shell=True)
 	assert os.path.exists('cluster.pin')
-	try:
-		num_cores = mp.cpu_count()
-	except NotImplementedError:
-		num_cores = 10
+
 	records = SeqIO.parse(input,'fasta')
 	chunks = [[]]*num_cores
 	for i,rec in enumerate(records):
@@ -45,6 +43,7 @@ def cycle_blast(input="goodProteins.fasta"):
 	sp.call("cat orthoallvall* > orthoallvall.txt",shell=True)
 	return "orthoallvall.txt"
 
+
 def _call_mcl(prot_records):
 	homedir = os.getcwd()
 	for prot in prot_records:
@@ -59,9 +58,7 @@ def _call_mcl(prot_records):
 		assert os.path.exists('goodProteins.fasta')
 		sp.call("formatdb -t cluster -i goodProteins.fasta -p T -n cluster", shell=True)
 		assert os.path.exists('cluster.pin')
-		# need to thread this or hack up the input into pieces or something.
-		# what is this 2005
-		# TODO
+
 		before = time()
 		cycle_blast(input='goodProteins.fasta')
 		print "blastp step of orthomcl takes %s seconds for %s proteins" %(time()-before,len(prot_records))
@@ -126,6 +123,8 @@ def assign_groups(genes):
 	# just a giant iterator of gene objects, please.
 	newbatch = start_batch()
 	prots = [g.record for g in genes]
+	if not len(prots):
+		return
 	gtext = _call_mcl(prots)
 	parse_groups(gtext, batch=newbatch)
 

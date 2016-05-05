@@ -7,7 +7,7 @@ from threading import Thread,Semaphore
 from Bio import SearchIO, SeqIO, SeqRecord, Seq
 from Bio.Alphabet import IUPAC
 
-from database import hmm_location, Hit, Gene
+from database import hmm_location, Hit, Gene, num_cores
 
 
 def _call_hmmer(hmm, inputproteins):
@@ -37,14 +37,13 @@ def _call_hmmer(hmm, inputproteins):
 							return '-' * len(m.group(0))
 
 						if len(hsp.hit.seq) > 100:
-							yield hit.id, hsp.bitscore, re.sub('PPPPP+', appropriate_hyphens, str(hsp.hit.seq))
-						# this is the alignment with the --- in. I wonder if that's an issue.
-						# On the one hand, it can't be, prolines become -----+
-
+							hitseq = re.sub('PPPPP+', appropriate_hyphens, str(hsp.hit.seq))
+							hitseq = hitseq.translate(None,'-*').upper()
+							yield hit.id, hsp.bitscore, hitseq
 
 
 def profile(genes, hmms):
-	# TODO(MAYBE) return meaningfulresults from this
+	# TODO(MAYBE) return meaningful results from this
 	def aa(geneset):
 		for gene in geneset:
 			yield SeqRecord.SeqRecord(Seq.Seq(gene.translation, IUPAC.protein), id=str(gene.is_real()))
@@ -61,7 +60,7 @@ def profile(genes, hmms):
 				hit_list.append(new_hit)
 		Hit._save_many(hit_list)
 		semaphore.release()
-	sem = Semaphore(10)
+	sem = Semaphore(num_cores)
 	for hmm in hmms:
 		yarn = Thread(target=threadlet,args=(protset,hmm,sem))
 		yarn.start()

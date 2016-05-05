@@ -51,12 +51,19 @@ class ProfileTest(ut.TestCase):
 		print "wiped hits, took %s seconds" %(now-before)
 		scan_assembly(next(ProfileTest.ng.assemblies()))
 		print "scanned assembly, took %s seconds" % (time()-now)
+		before = time()
+		assem = next(ProfileTest.ng.assemblies())
+		for contig in assem.contigs():
+			for gene in contig.genes():
+				for h in Hit.fetch(gene):
+					h.delete()
+					self.assertFalse(h.is_real())
+		now = time()
+		print "wiped hits, took %s seconds" %(now-before)
 
 
 class HmmTest(ut.TestCase):
 	# TODO add more of these
-
-
 
 	def test_list_hmms(self):
 		print "testing list_hmms"

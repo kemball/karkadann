@@ -23,7 +23,12 @@ class PromerTest(ut.TestCase):
 				for contig in cls.assem.contigs():
 					call_clusters(contig)
 
-
+	def test_identity(self):
+		with get_cursor() as cur:
+			cur.execute("select id from clusters limit 1;")
+			cluster = Cluster.get(cur.fetchone()[0])
+		score = promer_score(cluster,cluster)
+		self.assertEqual(score,1)
 
 
 	def test_promer_runs(self):

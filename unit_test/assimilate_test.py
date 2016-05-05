@@ -49,6 +49,7 @@ class AssimilateTest(ut.TestCase):
 		print "testing fasta assimilation"
 		ng = assimilate_from_fasta(self.testfastafile)
 		self.assertTrue(ng.is_real())
+		ng.delete()
 
 	def test_slug_twins(self):
 		# when they have very similar description fields and might have trouble making unique genome names.
