@@ -133,15 +133,19 @@ def ortho_score(clustera, clusterb, batch=None):
 	if not batch:
 		batch = most_recent_batch()
 	total_genes = len(clustera.gene_list)+len( clusterb.gene_list)
-	if total_genes <=2:
+	if total_genes <= 2:
 		print "cluster a %s and cluster b %s have not enough genes between them. " % (clustera.is_real(),clusterb.is_real())
 		return 0
 	orthogroups_a = defaultdict(int)
 	for gene in clustera.gene_list:
 		orthogroups_a[gene.orthogroup(batch=batch)] += 1
+	if "" in orthogroups_a.keys():
+		raise ValueError("A gene in cluster %s has no orthogroup"% clustera.is_real())
 	orthogroups_b = defaultdict(int)
 	for gene in clusterb.gene_list:
 		orthogroups_b[gene.orthogroup(batch=batch)] += 1
+	if "" in orthogroups_b.keys():
+		raise ValueError("A gene in cluster %s has no orthogroup"% clusterb.is_real())
 	allkeys = list(set(orthogroups_a.keys()) | set(orthogroups_b.keys()))
 	sames = 0
 	for key in allkeys:

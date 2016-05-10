@@ -11,8 +11,7 @@ from itertools import combinations
 
 p = mp.Pool(maxtasksperchild=10)
 
-files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb", shell=True).split()
-files = files[0:200]
+files = sp.check_output("ls /home/kemball/diatom/phosfasta/*.gb", shell=True).split()
 
 before = time()
 genomes = p.map(assimilate_from_ncbi, files)  # genomes is a map object
@@ -32,12 +31,6 @@ list(tinypool.map(scan_assembly, assems))
 print "parallel scanning takes %s seconds, or %s seconds per" % ((time() - before),
                                                                  (time() - before) / len(assems))
 # this only does cluster-based genes which is a bit cheatz
-
-
-with get_cursor() as cur:
-	cur.execute("select id from assemblies limit 10;")
-	results = cur.fetchall()
-assems = Assembly.get_many([x for (x,) in results])
 
 
 def contig_flat(assemblylist):

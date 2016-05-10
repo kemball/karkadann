@@ -145,16 +145,17 @@ def assimilate_from_ncbi(ncbifile):
 			# they don't always have an assembly accession number.
 			assem_acc = None
 
-		newassem = Assembly(record=reannotated_record, genome=newgenome, accession=assem_acc)
-		# I'd wrap this is a try/except but what could I even do? If this fails Here There Be Problems
-		newassem.save()
-		print "assembly for genome %s saved" % newgenome._name
-		_save_contigs(reannotated_record,newassem)
-		print "all contigs for genome %s saved" % newgenome._name
-
+	except IndexError:
+		assem_acc = None
 	except:
 		newgenome.delete()
 		raise
+	newassem = Assembly(record=reannotated_record, genome=newgenome, accession=assem_acc)
+	# I'd wrap this is a try/except but what could I even do? If this fails Here There Be Problems
+	newassem.save()
+	print "assembly for genome %s saved" % newgenome._name
+	_save_contigs(reannotated_record,newassem)
+	print "all contigs for genome %s saved" % newgenome._name
 	return newgenome
 
 # TODO Need a doroghazi importer

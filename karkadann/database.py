@@ -99,7 +99,10 @@ class dbThing(object):
 
 	@classmethod
 	def get(cls, db_id):
-		return cls.get_many([db_id]).next()
+		x = cls.get_many([db_id])
+		for y in x:
+			return y
+		raise KeyError("Nothing of class %s with db_id %s found"%(cls.__name__,db_id))
 
 	@classmethod
 	def get_many(cls, db_ids):
@@ -390,7 +393,6 @@ class Gene(dbThing):
 		return SeqRecord.SeqRecord(id="%s|%s_%s" % (self._contig, self._contig, self._id),
 		                           seq=Seq(self._translation, alphabet=IUPAC.protein))
 
-
 	def hits(self):
 		with get_cursor() as cur:
 			cur.execute("select id from hits where gene = %s;",(self.is_real(),))
@@ -426,7 +428,7 @@ class Hit(dbThing):
 			try:
 				cur.execute(query,tuple(db_ids))
 			except:
-				print query%tuple(db_ids)
+				print query % tuple(db_ids)
 				print "PANIC SOMETHING BAD HAPPENED"
 				raise
 			for (ID,SCORE,GENE,HMM,SEQ) in cur.fetchall():
@@ -480,6 +482,10 @@ class Hit(dbThing):
 	def hmm(self):
 		return self._hmm
 
+	@property
+	def gene(self):
+		return Gene.get(self._gene)
+
 
 class Cluster(dbThing):
 	def __init__(self, gene_list=[], classification=None):
@@ -493,7 +499,9 @@ class Cluster(dbThing):
 		with get_cursor() as cur:
 			for db_id in db_ids:
 				ncl = Cluster()
+
 				cur.execute("select gene,classification from clusters where id = %s;", (db_id,))
+
 				gids = []
 				for g, c in cur.fetchall():
 						gids.append(g)
@@ -502,6 +510,14 @@ class Cluster(dbThing):
 				ncl._gene_list = list(Gene.get_many(gids))
 				ncl._id = db_id
 				yield ncl
+
+	@classmethod
+	def by_kind(cls,cluster_kind):
+		with get_cursor() as cur:
+			cur.execute("select distinct id from clusters where classification=%s;",(cluster_kind,))
+			return Cluster.get_many([x for (x,) in cur.fetchall()])
+
+
 
 	@property
 	def gene_list(self):
