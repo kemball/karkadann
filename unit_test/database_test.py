@@ -349,7 +349,7 @@ class HitTest(ut.TestCase):
 		newhit = Hit(gene=gene, score=5, hmm="testhmm")
 		try:
 			newhit.save()
-			otherhit = Hit.fetch(gene)
+			otherhit = gene.hits()
 			self.assertEqual(otherhit[0].is_real(), newhit.is_real())
 		finally:
 			newhit.delete()

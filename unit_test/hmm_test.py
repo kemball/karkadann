@@ -27,7 +27,7 @@ class ProfileTest(ut.TestCase):
 				nhit.save()
 				self.assertEqual(nhit.seq,'LEET')
 				self.assertEqual(nhit.score,5)
-				self.assertGreater(len(Hit.fetch(genes[0])),0)
+				self.assertGreater(len(genes[0].hits()),0)
 				nhit.delete()
 				self.assertFalse(nhit.is_real())
 			with get_cursor() as cur:
@@ -44,7 +44,7 @@ class ProfileTest(ut.TestCase):
 		assem = next(ProfileTest.ng.assemblies())
 		for contig in assem.contigs():
 			for gene in contig.genes():
-				for h in Hit.fetch(gene):
+				for h in gene.hits():
 					h.delete()
 					self.assertFalse(h.is_real())
 		now = time()
@@ -55,7 +55,7 @@ class ProfileTest(ut.TestCase):
 		assem = next(ProfileTest.ng.assemblies())
 		for contig in assem.contigs():
 			for gene in contig.genes():
-				for h in Hit.fetch(gene):
+				for h in gene.hits():
 					h.delete()
 					self.assertFalse(h.is_real())
 		now = time()

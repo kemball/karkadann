@@ -440,11 +440,7 @@ class Hit(dbThing):
 				nhit._id = ID
 				yield nhit
 
-	@classmethod
-	def fetch(cls, gene):
-		with get_cursor() as cur:
-			cur.execute("select id from hits where gene = %s;", (gene.is_real(),))
-			return list(Hit.get_many([x for (x,) in cur.fetchall()]))
+
 
 	@cursor_required
 	def delete(self, cur=None):

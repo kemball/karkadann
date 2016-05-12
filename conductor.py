@@ -12,7 +12,7 @@ from itertools import combinations
 p = mp.Pool(maxtasksperchild=10)
 
 files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb", shell=True).split()
-files = files[0:200]
+files = files[0:5]
 
 before = time()
 genomes = p.map(assimilate_from_ncbi, files)  # genomes is a map object
@@ -44,8 +44,7 @@ listcontigs = contig_flat(assems)
 before = time()
 
 clusts = p.map(call_clusters, listcontigs)
-print "parallel cluster calling takes %s seconds or %s seconds per" % ((time() - before),
-                                                                       (time() - before) / len(listcontigs))
+print "parallel cluster calling takes %s seconds " % (time() - before)
 
 
 with get_cursor() as cur:
