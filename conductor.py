@@ -2,7 +2,7 @@ import multiprocessing as mp
 import subprocess as sp
 from time import time
 from karkadann.promer import promer_score
-from karkadann.database import get_cursor, Cluster,Gene,Assembly
+from karkadann.database import get_cursor, Cluster,Gene,Assembly,domain_max
 from karkadann.assimilate import assimilate_from_ncbi
 from karkadann.hmm import scan_assembly
 from karkadann.cluster_call import call_clusters
@@ -11,7 +11,8 @@ from itertools import combinations
 
 p = mp.Pool(maxtasksperchild=10)
 
-files = sp.check_output("ls /home/kemball/diatom/phosfasta/*.gb", shell=True).split()
+files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb", shell=True).split()
+files = files[0:200]
 
 before = time()
 genomes = p.map(assimilate_from_ncbi, files)  # genomes is a map object
@@ -38,9 +39,8 @@ def contig_flat(assemblylist):
 		for contig in assembly.contigs():
 			yield contig
 
+listcontigs = contig_flat(assems)
 
-listcontigs = list(contig_flat(assems))
-print len(listcontigs)
 before = time()
 
 clusts = p.map(call_clusters, listcontigs)
@@ -57,6 +57,7 @@ print "assigning groups takes %s seconds" % (time() - before)
 
 p.close()
 
+
 def splat_promer(args):
 	x = promer_score(*args)
 
@@ -67,10 +68,9 @@ def splat_domain(args):
 np = mp.Pool(maxtasksperchild=10)
 
 #
-with get_cursor() as cur:
-	cur.execute("select distinct classification from clusters;")
-	clusterlist = cur.fetchall()
-for (clustertype,) in clusterlist:
+from uclust import corehmms,calc_domain_max
+for clustertype in ["nrps","PKS_I","PKS_II","PKS_III"]:
+	calc_domain_max(clustertype)
 	with get_cursor() as cur:
 		arglist = []
 		cur.execute("select distinct id from clusters where classification=%s;", (clustertype,))
@@ -86,3 +86,9 @@ for (clustertype,) in clusterlist:
 
 	np.map(splat_promer, arglist)
 	np.map(splat_domain, arglist)
+
+
+def doroghazi_metric(clustera,clusterb):
+
+	total =  ortho_score(clustera,clusterb)+2.0*domain_max(clustera,clusterb)+promer_score(clustera,clusterb)
+	return total/4.0

@@ -38,11 +38,13 @@ if not os.access(hmm_location, os.R_OK):
 	os.mkdir(hmm_location)
 
 import multiprocessing
+
 # TODO: a config option for this.
 try:
 	num_cores = multiprocessing.cpu_count()
 except NotImplementedError:
 	num_cores = 5
+
 
 @contextmanager
 def get_cursor():
@@ -102,7 +104,7 @@ class dbThing(object):
 		x = cls.get_many([db_id])
 		for y in x:
 			return y
-		raise KeyError("Nothing of class %s with db_id %s found"%(cls.__name__,db_id))
+		raise KeyError("Nothing of class %s with db_id %s found" % (cls.__name__, db_id))
 
 	@classmethod
 	def get_many(cls, db_ids):
@@ -123,7 +125,7 @@ class Genome(dbThing):
 				cur.execute("select id,name,added from genomes where id = %s;", (db_id,))
 				gid, name, added = cur.fetchone()
 				ng = Genome()
-				ng._id,ng._name, ng._added = gid,name, added
+				ng._id, ng._name, ng._added = gid, name, added
 				yield ng
 
 	def __init__(self, genome_name=None):
@@ -166,7 +168,6 @@ class Genome(dbThing):
 		else:
 			cur.execute("select binomial from genus_species where genome_id=%s;", (self._id,))
 			return cur.fetchone()[0]
-
 
 	def assemblies(self):
 		with get_cursor() as cur:
@@ -325,12 +326,12 @@ class Gene(dbThing):
 			return
 		with get_cursor() as cur:
 			query = "select id,translation,contig,start,end,strand,accession from genes where id in (%s);"
-			query %= ",".join(['%s']*len(db_ids))
+			query %= ",".join(['%s'] * len(db_ids))
 			try:
-				cur.execute(query,tuple(db_ids))
+				cur.execute(query, tuple(db_ids))
 			except:
 				print "something went wrong??"
-				print query%tuple(db_ids)
+				print query % tuple(db_ids)
 				raise
 			for res in cur.fetchall():
 				ng = Gene()
@@ -395,7 +396,7 @@ class Gene(dbThing):
 
 	def hits(self):
 		with get_cursor() as cur:
-			cur.execute("select id from hits where gene = %s;",(self.is_real(),))
+			cur.execute("select id from hits where gene = %s;", (self.is_real(),))
 			return list(Hit.get_many([x for (x,) in cur.fetchall()]))
 
 	def orthogroup(self, batch=None):
@@ -412,7 +413,7 @@ class Gene(dbThing):
 
 class Hit(dbThing):
 	def __init__(self, gene=None, score=None, seq=None, hmm=None):
-		self._seq = seq and Seq(seq,IUPAC.protein)
+		self._seq = seq and Seq(seq, IUPAC.protein)
 		self._score = score
 		self._hmm = hmm
 		self._gene = gene and gene.is_real() or None
@@ -424,19 +425,19 @@ class Hit(dbThing):
 			return
 		with get_cursor() as cur:
 			query = "select id,score,gene,hmm,hitseq from hits where id in (%s);"
-			query %= ",".join(['%s']*len(db_ids))
+			query %= ",".join(['%s'] * len(db_ids))
 			try:
-				cur.execute(query,tuple(db_ids))
+				cur.execute(query, tuple(db_ids))
 			except:
 				print query % tuple(db_ids)
 				print "PANIC SOMETHING BAD HAPPENED"
 				raise
-			for (ID,SCORE,GENE,HMM,SEQ) in cur.fetchall():
-				nhit = Hit(score=SCORE, seq=SEQ,hmm=HMM)
+			for (ID, SCORE, GENE, HMM, SEQ) in cur.fetchall():
+				nhit = Hit(score=SCORE, seq=SEQ, hmm=HMM)
 				# An additional dependence?
 				# TODO think a little bit about whether ._gene and the like should be integers or Genes.
 				nhit._gene = GENE
-				nhit._id= ID
+				nhit._id = ID
 				yield nhit
 
 	@classmethod
@@ -504,20 +505,18 @@ class Cluster(dbThing):
 
 				gids = []
 				for g, c in cur.fetchall():
-						gids.append(g)
-						if c:
-							ncl._kind = c
+					gids.append(g)
+					if c:
+						ncl._kind = c
 				ncl._gene_list = list(Gene.get_many(gids))
 				ncl._id = db_id
 				yield ncl
 
 	@classmethod
-	def by_kind(cls,cluster_kind):
+	def by_kind(cls, cluster_kind):
 		with get_cursor() as cur:
-			cur.execute("select distinct id from clusters where classification=%s;",(cluster_kind,))
+			cur.execute("select distinct id from clusters where classification=%s;", (cluster_kind,))
 			return Cluster.get_many([x for (x,) in cur.fetchall()])
-
-
 
 	@property
 	def gene_list(self):
@@ -597,3 +596,37 @@ def save_orthogroup(gene, orthogroup, batch=None):
 			raise ValueError("gene %s needs to be real" % gene._acc)
 		cur.execute("insert into orthogroups (batch,`group_name`,gene) values (%s,%s,%s);",
 		            (batch, orthogroup, gene.is_real()))
+
+
+def save_domain_max(clustera, clusterb, identity):
+	save_domain_max_many([(clustera,clusterb,identity)])
+
+
+def save_domain_max_many(cci_iterator):
+	def normalized(clustera,clusterb,identity):
+		l = clustera.is_real()
+		r = clusterb.is_real()
+		if l == r:
+			return 1,l,r
+		elif l < r:
+			# left should be larger. Shouldn't matter.
+			l, r = r, l
+		return identity,l,r
+	params = [normalized(*x) for x in cci_iterator]
+	with get_cursor() as cur:
+		cur.executemany("replace into domain_max (score,l,r) values (%s,%s,%s);", params)
+
+
+def domain_max(clustera, clusterb):
+	l = clustera.is_real()
+	r = clusterb.is_real()
+	if l == r:
+		return 1
+	elif l < r:
+		# left should be larger. Shouldn't matter.
+		l, r = r, l
+	with get_cursor() as cur:
+		cur.execute("select score from domain_max where l = %s and r = %s;", (l, r))
+		for result in cur.fetchall():
+			return result[0]
+		return 0.0

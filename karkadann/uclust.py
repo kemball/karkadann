@@ -3,11 +3,10 @@ import tempfile
 import subprocess as sp
 from collections import defaultdict
 import itertools
-import re
 from time import time
 
 
-from karkadann.database import Cluster,Hit,config
+from karkadann.database import Cluster,Hit,config,domain_max,save_domain_max_many
 
 usearch_location = config.get('usearch','usearch_location')
 if not os.access(usearch_location,os.R_OK|os.X_OK):
@@ -16,7 +15,8 @@ if not os.access(usearch_location,os.R_OK|os.X_OK):
 
 
 def uclust_all(allhits,identity):
-
+	if not len(allhits):
+		return {}
 	hitclusters = defaultdict(list)
 
 	with tempfile.NamedTemporaryFile(suffix='.fas') as ntfasta:
@@ -46,13 +46,25 @@ def uclust_all(allhits,identity):
 	return returnclusters
 
 
-
 corehmms = dict(nrps="Condensation",PKS_I="PKS_KS",PKS_II="PKS_KS",PKS_III="PKS_KS")
 
-def doroghazi_uclust(cluster_kind):
+
+def calc_domain_max(cluster_kind):
 	if cluster_kind not in corehmms.keys():
 		raise ValueError("I don't know how to deal with cluster class %s" % cluster_kind)
 	clusters = list(Cluster.by_kind(cluster_kind))
+	domain_max_dict = {}
+	for gca,gcb in itertools.combinations(clusters,2):
+		# flip through all the clusters, if we have domain_max scores for all of them, just return that.
+		# if we don't, recalculate them.
+		curscore = domain_max(gca,gcb)
+		if curscore is None:
+			break
+		else:
+			domain_max_dict[(gca,gcb)] = curscore
+
+	else:
+		return domain_max_dict
 	relevanthits = []
 	hitsbyclust = defaultdict(list)
 	for c in clusters:
@@ -62,8 +74,8 @@ def doroghazi_uclust(cluster_kind):
 					relevanthits.append(h)
 					hitsbyclust[c].append(h)
 
-	domain_max = {(a,b):0.0 for (a,b) in itertools.combinations(clusters,2)}
-	for identity in [x/10.0 for x in range(0,10)]:
+	domain_max_dict = {(a,b):0.0 for (a,b) in itertools.combinations(clusters,2)}
+	for identity in [x/10.0 for x in xrange(0,11)]:
 		hc = uclust_all(relevanthits,identity)
 		hit_to_uclust = {}
 		for c in hc.keys():
@@ -72,19 +84,30 @@ def doroghazi_uclust(cluster_kind):
 				# Hit objects is finicky and will only work if they're literally the same Hit instance.
 				# I wish there was a way to mark them immutable.
 				hit_to_uclust[h.is_real()]=c
-		for gca,gcb in domain_max.keys():
-			score = 0
+		tosave = []
+		for gca,gcb in domain_max_dict.keys():
+			score = 0.0
+
 			ahits = hitsbyclust[gca]
-			aclusts = [hit_to_uclust[a.is_real()] for a in ahits]
 			bhits = hitsbyclust[gcb]
-			bclusts = [hit_to_uclust[b.is_real()] for b in bhits]
-			for a in aclusts:
-				if a in bclusts:
-					score += 1
-			score /=(len(ahits) + len(bhits))
-			if score>.5:
-				domain_max[(gca,gcb)] = identity
-	return domain_max
+
+			if len(ahits) == 0 or len(bhits) == 0:
+				continue
+
+			aclusts = [hit_to_uclust[ah._id] for ah in ahits]
+			bclusts = [hit_to_uclust[bh._id] for bh in bhits]
+
+			for ac in aclusts:
+				for bc in bclusts:
+					if ac == bc:
+						score += 1
+
+			score /=(len(ahits) + len(bhits)+0.0)
+			if score>=.5:
+				domain_max_dict[(gca,gcb)] = identity
+				tosave.append((gca,gcb,identity))
+		save_domain_max_many(tosave)
+	return domain_max_dict
 
 
 

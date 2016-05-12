@@ -33,7 +33,7 @@ CREATE TABLE `assemblies` (
   UNIQUE KEY `unique_file` (`gb_record`),
   KEY `genome_id` (`genome_id`),
   CONSTRAINT `assembly_genome` FOREIGN KEY (`genome_id`) REFERENCES `genomes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2193 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3353 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -59,7 +59,7 @@ CREATE TABLE `cluster_names` (
   PRIMARY KEY (`id`),
   KEY `genome` (`genome`),
   CONSTRAINT `cluster_names_ibfk_1` FOREIGN KEY (`genome`) REFERENCES `genomes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=733 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=13492 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -113,7 +113,7 @@ CREATE TABLE `contigs` (
   PRIMARY KEY (`id`),
   KEY `assembly_id` (`assembly_id`),
   CONSTRAINT `contig_assembly` FOREIGN KEY (`assembly_id`) REFERENCES `assemblies` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=48549 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=103300 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,6 +123,33 @@ CREATE TABLE `contigs` (
 LOCK TABLES `contigs` WRITE;
 /*!40000 ALTER TABLE `contigs` DISABLE KEYS */;
 /*!40000 ALTER TABLE `contigs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `domain_max`
+--
+
+DROP TABLE IF EXISTS `domain_max`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `domain_max` (
+  `score` float NOT NULL,
+  `l` int(11) NOT NULL DEFAULT '0',
+  `r` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`l`,`r`),
+  KEY `r` (`r`),
+  CONSTRAINT `domain_max_ibfk_1` FOREIGN KEY (`l`) REFERENCES `cluster_names` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `domain_max_ibfk_2` FOREIGN KEY (`r`) REFERENCES `cluster_names` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `domain_max`
+--
+
+LOCK TABLES `domain_max` WRITE;
+/*!40000 ALTER TABLE `domain_max` DISABLE KEYS */;
+/*!40000 ALTER TABLE `domain_max` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -143,7 +170,7 @@ CREATE TABLE `genes` (
   PRIMARY KEY (`id`),
   KEY `contig` (`contig`),
   CONSTRAINT `genes_contig` FOREIGN KEY (`contig`) REFERENCES `contigs` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4758551 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7963342 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -168,7 +195,7 @@ CREATE TABLE `genomes` (
   `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=80867 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=83845 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -220,7 +247,7 @@ CREATE TABLE `hits` (
   PRIMARY KEY (`id`),
   KEY `gene_map` (`gene`),
   CONSTRAINT `gene_map` FOREIGN KEY (`gene`) REFERENCES `genes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=287382 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3296408 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -295,7 +322,7 @@ CREATE TABLE `orthomcl_batches` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `done` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=95 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=137 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -343,4 +370,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-04-22 16:26:58
+-- Dump completed on 2016-05-11 11:30:22

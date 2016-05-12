@@ -16,7 +16,7 @@ orthomcl_location = config.get('orthomcl', 'orthomcl_location')
 user = config.get('orthomcl', 'username')
 password = config.get('orthomcl', 'password')
 db = config.get('orthomcl', 'dbname')
-mcl_location = sp.check_output('which mcl', shell=True).strip()
+mcl_location = config.get('orthomcl','mcl_location')
 
 
 # has to be sandboxed
