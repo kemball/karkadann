@@ -3,7 +3,7 @@ import subprocess as sp
 from time import time
 from karkadann.promer import promer_score
 from karkadann.database import get_cursor, Cluster,Gene,Assembly,domain_max
-from karkadann.assimilate import assimilate_from_ncbi
+from karkadann.assimilate import assimilate_from_ncbi,assimilate_from_fasta
 from karkadann.hmm import scan_assembly
 from karkadann.cluster_call import call_clusters
 from karkadann.domains import assign_groups, ortho_score
@@ -11,8 +11,8 @@ from itertools import combinations
 
 p = mp.Pool(maxtasksperchild=10)
 
-files = sp.check_output("ls /home/kemball/diatom/actinobacteria_class/genbank/*.gb", shell=True).split()
-files = files[0:5]
+files = sp.check_output("ls /home/kemball/diatom/plum/*.gb", shell=True).split()
+
 
 before = time()
 genomes = p.map(assimilate_from_ncbi, files)  # genomes is a map object
