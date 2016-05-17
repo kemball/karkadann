@@ -165,7 +165,7 @@ def assimilate_from_fasta(fastafile):
 	# raw contig importer
 	ncbirecord = list(SeqIO.parse(fastafile,'fasta',alphabet=IUPAC.IUPACAmbiguousDNA()))
 	make_standard(ncbirecord)
-	ng = _save_unique(os.path.basename(fastafile))
+	ng = _save_unique(os.path.basename(fastafile)+" ".join(fastafile.split()))
 	try:
 		reannotated_record = annotate(ncbirecord)
 		newassem = Assembly(record=reannotated_record, genome=ng)
