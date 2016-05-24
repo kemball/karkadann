@@ -51,6 +51,27 @@ class AssimilateTest(ut.TestCase):
 		self.assertTrue(ng.is_real())
 		ng.delete()
 
+	def test_multiple_fasta(self):
+		print "testing 2 fasta assimilation"
+		ngone = assimilate_from_fasta(self.testfastafile)
+		ngtwo = assimilate_from_fasta(self.testfastafile)
+		self.assertTrue(ngone.is_real())
+		self.assertTrue(ngtwo.is_real())
+		self.assertNotEqual(ngone.is_real(),ngtwo.is_real())
+		ngone.delete()
+		ngtwo.delete()
+
+	def test_ridiculous_fasta(self):
+		print "testing ten duplicates"
+		genomes = [assimilate_from_fasta(self.testfastafile) for x in range(0,10)]
+
+		ids = map(lambda x: x.is_real(),genomes)
+		self.assertEqual(len(set(ids)),len(ids)) # no dupes
+		for ng in genomes:
+			self.assertTrue(ng.is_real())
+			ng.delete()
+			self.assertFalse(ng.is_real())
+
 	def test_slug_twins(self):
 		# when they have very similar description fields and might have trouble making unique genome names.
 		ng = assimilate_from_ncbi(self.testgbfile)

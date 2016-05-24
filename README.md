@@ -15,7 +15,7 @@ I've documented all the function signatures here but the API is still half-baked
 
 ###Prodigal.py
 
-Annotate takes a SeqIO record iterator and runs it through prodigal to reannotate all the genes. This is a bit rude considering genbank files mostly contain gene annotations already, but they can be patchy or missing or just inconsistent.
+Annotate takes a SeqIO record iterator and runs it through prodigal to reannotate all the genes, preserving ones that overlap significantly with annotations already in the file. This is a bit rude but they can be patchy or missing or just inconsistent.
 
 
 #####`annotate(gbrecord,preserve_anno=False)`
@@ -51,7 +51,7 @@ Creates a new Genome object. If created with a genome_name, represents an unsave
 * `.added()` Returns the DateTime the genome was added to the database.
 * `.binomial(binomial=None)` Acts a flexible getter/setter for the binomial name associated with this genome.
 
-`Genome.fetch(genome_name)` fetches and populates a Genome object from the database and returns it.
+`Genome.fetch(genome_name)` fetches and populates a Genome object from the database, referenced by name, and returns it.
 
 #### `Assembly(records,genome_id,)`
 
@@ -61,15 +61,18 @@ Creates a new Assembly object.  If created with a records iterable and a genome 
 * `.save()` Saves the assembly to the database.
 * `.delete()` Deletes the assembly from the database. (Handles the gbfile backup)
 * `.is_real()` Checks if the Assembly has been saved to the database, and if so, returns its id.
-* `.is_record()` Returns an iterator over the gbfile underneath.
-* `.save_record()` Helper function to generate portable filenames that aren't used yet for saving the genbank records. You shouldn't need this at all.
+* `.record()` Returns an iterator of SeqRecords over the gbfile underneath.
+* `.save_record()` Helper function to generate portable filenames for saving the genbank records. You shouldn't need this at all.
 * `.contigs()` Returns a generator of contigs in this assembly.
 
-`Assembly.fetch(genome_id)` fetches a list of assemblies based on the genome_id. 99% of the time there won't be more than one but the database supports that on purpose, so it doesn't make sense to ignore it here.
+`Assembly.fetch(genome_id)` fetches a list of assemblies based on the genome_id. 99% of the time there won't be more than one but the database supports that on purpose, so it doesn't make sense to ignore it here. This is pretty confusing but a fix would take a long time, so it'll have to be done later.
 
 ####`Contig(seq,assembly,accession)`
+Class methods:
+* `.get(db_id)` Fetches a Contig from the database by id. Returns the Contig object, like all .get()
+* `.get_many(db_ids)` Fetches many contigs.
 
-* `.get(db_id)` Fetches a Contig from the database by id.
+Object methods:
 * `.save()` Saves the Contig
 * `.delete()` Deletes the contig from the database. (handles genes correctly)
 * `.is_real()` Checks if the Contig has been saved to the database, and if so, returns its id.
@@ -79,39 +82,63 @@ Creates a new Assembly object.  If created with a records iterable and a genome 
 
 ####`Gene(translation,contig,start,end,strand,accession)`
 
+Class methods:
 * `.get(db_id)` Fetches a Gene from the database by id.
+* `.get_many(db_ids)` Fetches many genes.
+
+Object methods:
 * `.save()` Saves the Gene to the database.
 * `.delete()` Deletes the gene from the database.
 * `.is_real()` Checks if the Gene has been saved, and if so returns its id.
-* `.location` Returns the FeatureLocation for the Gene.
+* `.location` Returns the FeatureLocation for the Gene
+* `.record` Property that returns the protein sequence for this gene as a SeqRecord
 * `.translation` Returns the AA sequence for the Gene.
 * `.orthogroup` Returns a string representing the orthogroup this gene belongs to. A property. `.orthogroup(batch=batchnum)` will return the orthogroup string for that particular batch.
 
 ####`Hit(Gene,score,hmm)`
 
+Class methods:
 * `.get(db_id)` Fetches a Hit from the database by id.
+
+Object methods:
 * `.save()` Saves the hit to the database.
 * `.delete()` Deletes the hit from the database.
 * `.is_real()` Checks if the hit has been saved, and if so returns its id.
 * `.score` Pseudoproperty. Returns the bitscore of the hit.
+* `.seq` Pseudoproperty. Returns the sequence that matched.
+* `.hmm` Pseudoproperty. Returns the hmm that produced this hit.
+* `.gene` Pseudoproperty. Returns the gene this hit is inside.
 
 ####`Cluster(gene_list,classification)`
 Reads a cluster from the database or makes a new one from a classification and a gene_list. The id isn't numeric but a string based on its classification and the number of existing clusters.
 
-* `.get(db_id)` Fetches a cluster object from the database
+Class methods:
+* `.get(db_id)` Fetches a cluster object from the database.
+* `.get_many(db_ids)` Fetches an iterator of clusters from the database.
+* `.by_kind(cluster_kind)` Fetches all clsuters having a given classification, 'nrps' or what have you.
+
+Object methods:
 * `.save()` Saves the cluster to the database.
 * `.delete()` Deletes the cluster from the database.
 * `.is_real()` Checks if the cluster has been saved, and if so returns its id.
 * `.fna()` Returns a SeqRecord object representing the underlying DNA for the cluster
 * `.faa()` Returns a list of SeqRecords for each protein in the cluster in order.
+* `.gene_list` Returns the genes that make up the cluster.
 
 
-#### Batch functions 
+#### Orthomcl Batch functions 
 * `most_recent_batch()` Returns the id for the most recent orthomcl batch created. The default, usually.
 * `start_batch()` Creates a new batch for orthomcl processing.
 * `save_orthogroup(gene,orthogroup,batch=most_recent_batch())` Labels a particular gene as belonging to a particular orthogroup for a particular batch.
 
 You probably shouldn't need these, they're called internally by domains.assign_groups, but you never know.
+
+
+#### Domain score functions
+* `save_domain_max(clustera,clusterb,identity)` Saves the identity and clusters into the domain_max table. Really should not need this.
+* `save_domain_max_many(cci_iterator)` Like save_domain_max but does an iterator of argument tuples. Should not need this.
+* `domain_max(clustera,clusterb)` Returns the maximum identity threshhold where 50% of marker domains share a cluster. Useful.
+
 
 
 ##hmm.py
@@ -137,7 +164,7 @@ Returns the average involvement of the two gene clusters. Tidies up after itself
 #### `assign_groups`(genes)
 Automatically and safely creates a new 'orthomcl batch'. All orthomcl group callings are referenced by batch number so that a second orthomcl clustering can be done without clobbering the first. 
 
-#### `domain_score`(clustera,clusterb,batch)
+#### `ortho_score`(clustera,clusterb,batch)
 Returns the shared-domain score for two clusters.
 
 ##assimilate.py

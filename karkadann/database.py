@@ -303,6 +303,13 @@ class Contig(dbThing):
 			cur.execute("select id from genes where contig = %s order by start;", (self._id,))
 			return Gene.get_many([x for (x,) in cur.fetchall()])
 
+	@cursor_required
+	def clusters(self,cur=None):
+		if self.is_real(cur=cur):
+			cur.execute("select distinct clusters.id from clusters join genes on clusters.gene=genes.id where genes.contig=%s;"
+			            ,(self._id,))
+			return Cluster.get_many([x for (x,) in cur.fetchall()])
+
 
 class Gene(dbThing):
 	def __init__(self,
