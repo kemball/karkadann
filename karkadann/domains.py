@@ -25,7 +25,7 @@ def cycle_blast(input="goodProteins.fasta"):
 	assert os.path.exists('cluster.pin')
 
 	records = SeqIO.parse(input,'fasta')
-	chunks = [[]]*num_cores
+	chunks = [[] for x in range(0,num_cores)]
 	for i,rec in enumerate(records):
 		chunks[i%num_cores].append(rec)
 
@@ -56,8 +56,7 @@ def _call_mcl(prot_records):
 		SeqIO.write(prot_records, 'fasta/prots.fasta', 'fasta')
 		sp.call("%s/bin/orthomclFilterFasta fasta 10 20" % orthomcl_location, shell=True)
 		assert os.path.exists('goodProteins.fasta')
-		sp.call("formatdb -t cluster -i goodProteins.fasta -p T -n cluster", shell=True)
-		assert os.path.exists('cluster.pin')
+
 
 		before = time()
 		cycle_blast(input='goodProteins.fasta')
