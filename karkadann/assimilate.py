@@ -169,11 +169,14 @@ def assimilate_from_ncbi(ncbifile,genome_name=None):
 # TODO Need a doroghazi importer
 
 
-def assimilate_from_fasta(fastafile):
+def assimilate_from_fasta(fastafile,genome_name=None):
     # raw contig importer
     ncbirecord = list(SeqIO.parse(fastafile,'fasta',alphabet=IUPAC.IUPACAmbiguousDNA()))
     make_standard(ncbirecord)
-    ng = _save_unique(os.path.basename(fastafile)+ncbirecord[0].id)
+    if genome_name:
+        ng = Genome(genome_name=genome_name)
+    else:
+        ng = _save_unique(os.path.basename(fastafile)+ncbirecord[0].id)
     try:
         reannotated_record = annotate(ncbirecord)
         newassem = Assembly(record=reannotated_record, genome=ng)
