@@ -72,7 +72,7 @@ def make_standard(records):
 		if not record.name or record.name=="<unknown name>":
 			if len(record.id)>16:
 				record.id=record.id[:16]
-		elif len(record.name>16):
+		elif typof(record.name)==typeof("a string") and len(record.name>16):
 			record.name = record.name[:16]
 		for feat in record.features:
 			if feat.type == "CDS" and "translation" not in feat.qualifiers.keys():
