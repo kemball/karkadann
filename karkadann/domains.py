@@ -22,7 +22,6 @@ mcl_location = config.get('orthomcl','mcl_location')
 # has to be sandboxed
 def cycle_blast(input="goodProteins.fasta"):
 	format_proc = sp.Popen("formatdb -t cluster -i %s -p T -n cluster"%input,shell=True)
-	assert os.path.exists('cluster.pin')
 
 	records = SeqIO.parse(input,'fasta')
 	chunks = [[] for x in range(0,num_cores)]
@@ -33,6 +32,8 @@ def cycle_blast(input="goodProteins.fasta"):
 		if len(chunk):
 			SeqIO.write(chunk,'goodProteins%s.fasta'%number,'fasta')
 	format_proc.wait()
+	assert os.path.exists('cluster.pin')
+
 	procs =[]
 	for number,chunk in enumerate(chunks):
 		if not len(chunk):

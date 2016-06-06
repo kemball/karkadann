@@ -140,7 +140,8 @@ def assimilate_from_ncbi(ncbifile,genome_name=None):
     desc = reannotated_record[0].description
     if genome_name == None:
         newgenome = _save_unique(desc)
-    newgenome = Genome(genome_name=genome_name)
+    else:
+        newgenome = Genome(genome_name=genome_name)
 
     # this better be right...
     newgenome.binomial(reannotated_record[0].annotations['organism'])
