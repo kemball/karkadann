@@ -125,7 +125,7 @@ def _save_contigs(reannotated_record,newassem):
 		Gene._save_many(gene_iterable)
 
 
-def assimilate_from_ncbi(ncbifile):
+def assimilate_from_ncbi(ncbifile,genome_name=None):
 	# This is very scary. I understand. 100% of ncbi genbank files
 	# have length DBLink fields. "assembly:bleh biosample:bleh etc"
 	# If the whole field is longer than 80 characters, it warns us.
@@ -138,7 +138,9 @@ def assimilate_from_ncbi(ncbifile):
 	make_standard(ncbirecord)
 	reannotated_record = annotate(ncbirecord, preserve_anno=True)
 	desc = reannotated_record[0].description
-	newgenome = _save_unique(desc)
+     if genome_name == None:
+         newgenome = _save_unique(desc)
+     newgenome = Genome(genome_name=genome_name)
 
 	# this better be right...
 	newgenome.binomial(reannotated_record[0].annotations['organism'])
