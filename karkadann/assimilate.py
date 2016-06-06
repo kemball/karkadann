@@ -69,6 +69,11 @@ def make_standard(records):
 	# ok, I know this is weird, but I'm sick of runs of Ns not being labeled and partial proteins
 	# having CDS but no 'translation'. 
 	for record in records:
+		if not record.name or record.name="<unknown name>":
+			if len(record.id)>16:
+				record.id=record.id[:16]
+		elif len(record.name>16):
+			record.name = record.name[:16]
 		for feat in record.features:
 			if feat.type == "CDS" and "translation" not in feat.qualifiers.keys():
 				n_seq = feat.extract(record.seq)
