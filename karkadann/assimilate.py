@@ -69,7 +69,7 @@ def make_standard(records):
 	# ok, I know this is weird, but I'm sick of runs of Ns not being labeled and partial proteins
 	# having CDS but no 'translation'. 
 	for record in records:
-		if not record.name or record.name="<unknown name>":
+		if not record.name or record.name=="<unknown name>":
 			if len(record.id)>16:
 				record.id=record.id[:16]
 		elif len(record.name>16):
