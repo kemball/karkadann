@@ -331,22 +331,28 @@ class Gene(dbThing):
 	def get_many(cls, db_ids):
 		if not len(db_ids):
 			return
-		with get_cursor() as cur:
-			query = "select id,translation,contig,start,end,strand,accession from genes where id in (%s);"
-			query %= ",".join(['%s'] * len(db_ids))
-			try:
-				cur.execute(query, tuple(db_ids))
-			except:
-				print "something went wrong??"
-				print query % tuple(db_ids)
-				raise
-			for res in cur.fetchall():
-				ng = Gene()
-				ng._id, ng._translation, ng._contig, ng._start, ng._end, ng._strand, ng._acc = res
-				ng._start = int(ng._start)
-				ng._end = int(ng._end)
-				ng._strand = int(ng._strand)
-				yield ng
+		def chunk(iter,length):
+			iterlist = list(iter)
+			while len(iterlist)>0:
+				yield iterlist[:length]
+				iterlist[:length] = []
+		for idchunk in chunk(db_ids,10000):
+			with get_cursor() as cur:
+				query = "select id,translation,contig,start,end,strand,accession from genes where id in (%s);"
+				query %= ",".join(['%s'] * len(idchunk))
+				try:
+					cur.execute(query, tuple(idchunk))
+				except:
+					print "something went wrong??"
+					print query % tuple(idchunk)
+					raise
+				for res in cur.fetchall():
+					ng = Gene()
+					ng._id, ng._translation, ng._contig, ng._start, ng._end, ng._strand, ng._acc = res
+					ng._start = int(ng._start)
+					ng._end = int(ng._end)
+					ng._strand = int(ng._strand)
+					yield ng
 
 	@cursor_required
 	def save(self, cur=None):
