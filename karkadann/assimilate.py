@@ -166,7 +166,6 @@ def assimilate_from_ncbi(ncbifile,genome_name=None):
     print "all contigs for genome %s saved" % newgenome._name
     return newgenome
 
-# TODO Need a doroghazi importer
 
 
 def assimilate_from_fasta(fastafile,genome_name=None):
@@ -176,7 +175,7 @@ def assimilate_from_fasta(fastafile,genome_name=None):
     if genome_name:
         ng = Genome(genome_name=genome_name)
     else:
-        ng = _save_unique(os.path.basename(fastafile)+ncbirecord[0].id)
+        ng = _save_unique(ncbirecord[0].id+os.path.basename(fastafile))
     try:
         reannotated_record = annotate(ncbirecord)
         newassem = Assembly(record=reannotated_record, genome=ng)

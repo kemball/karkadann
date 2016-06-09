@@ -33,7 +33,7 @@ def _classify(gene):
 	if s['ectoine_synt']>35:
 		return 'ectoine'
 	if s['AfsA']>25:
-		return 'butryo'
+		return 'butyro'
 	if s['indsynth']>100:
 		return 'indole'
 	if s['LipM']>50 or s['LipU']>30 or s['LipV']>375 or s['ToyB']>175 or s['TunD']>200 or s['pur6']>200 or s['pur10']>600 or s['nikJ']>200 or s['nikO']>400:
@@ -53,6 +53,28 @@ def _classify(gene):
 	if s['TOMM']>25:
 		return "TOMMdocking"
 
+types_of_clusters = [
+	"PKS_I",
+	"PKS_I_transAT",
+	"PKS_II",
+	"PKS_III",
+	"nrps",
+	"terpene",
+	"lanti",
+	"beta_lactam",
+	"amino",
+	"sidero",
+	"ectoine",
+	"butyro",
+	"indole",
+	"nucleo",
+	"phosphoglycolipids",
+	"melanin",
+	"phos",
+	"nos",
+	"lant_c_jd",
+	"TOMMdocking"
+]
 
 def call_clusters(contig):
 	genes = list(contig.genes())

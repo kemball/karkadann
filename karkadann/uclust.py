@@ -4,6 +4,7 @@ import subprocess as sp
 from collections import defaultdict
 import itertools
 from time import time
+from cluster_call import _classify
 
 
 from karkadann.database import Cluster,Hit,config,domain_max,save_domain_max_many
@@ -23,7 +24,7 @@ def uclust_all(allhits,identity):
 		before = time()
 		allhits.sort(key = lambda x:-len(x.seq))
 		print "sorting takes %s " % (time()-before)
-		# hitseqs should be sorted by length or clustering breaks.
+		# hitseqs should be sorted by length or clustering is less accurate
 		for hit in allhits:
 			ntfasta.write(">%s\n%s\n" %(hit.is_real(),hit.seq))
 		ntfasta.flush()
@@ -46,11 +47,11 @@ def uclust_all(allhits,identity):
 	return returnclusters
 
 
-corehmms = dict(nrps="Condensation",PKS_I="PKS_KS",PKS_II="PKS_KS",PKS_III="PKS_KS")
+from cluster_call import types_of_clusters
 
 
 def calc_domain_max(cluster_kind):
-	if cluster_kind not in corehmms.keys():
+	if cluster_kind not in types_of_clusters:
 		raise ValueError("I don't know how to deal with cluster class %s" % cluster_kind)
 	clusters = list(Cluster.by_kind(cluster_kind))
 	domain_max_dict = {}
@@ -69,8 +70,8 @@ def calc_domain_max(cluster_kind):
 	hitsbyclust = defaultdict(list)
 	for c in clusters:
 		for g in c.gene_list:
-			for h in g.hits():
-				if h.hmm == corehmms[cluster_kind] and h.score>30:
+			if _classify(g) == cluster_kind:
+				for h in g.hits():
 					relevanthits.append(h)
 					hitsbyclust[c].append(h)
 

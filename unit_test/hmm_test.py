@@ -40,15 +40,18 @@ class ProfileTest(ut.TestCase):
 
 	def test_scan_assembly(self):
 		print "testing scan_assembly"
+		num_hits = 0
 		before = time()
 		assem = next(ProfileTest.ng.assemblies())
 		for contig in assem.contigs():
 			for gene in contig.genes():
 				for h in gene.hits():
+					num_hits += 1
 					h.delete()
 					self.assertFalse(h.is_real())
 		now = time()
-		print "wiped hits, took %s seconds" %(now-before)
+		print "wiped %s hits, took %s seconds" %(num_hits,now-before)
+		num_hits= 0
 		scan_assembly(next(ProfileTest.ng.assemblies()))
 		print "scanned assembly, took %s seconds" % (time()-now)
 		before = time()
@@ -57,9 +60,10 @@ class ProfileTest(ut.TestCase):
 			for gene in contig.genes():
 				for h in gene.hits():
 					h.delete()
+					num_hits += 1
 					self.assertFalse(h.is_real())
 		now = time()
-		print "wiped hits, took %s seconds" %(now-before)
+		print "wiped %s hits, took %s seconds" %(num_hits,now-before)
 
 
 class HmmTest(ut.TestCase):
