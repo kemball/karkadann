@@ -9,13 +9,21 @@ A complete rewrite of the GCF software and pipeline.
 
 `python setup.py test` will run automatic tests of all the code that exists so far. Some of it relies on testassem.gb being in a particular place but that's being phased out.
 
+
+
+
+
+
 ##Usage
 
+
+
+#Developem
 I've documented all the function signatures here but the API is still half-baked and subject to change. At some point there'll be a set of functions that are available for export and guaranteed not to change, but that point is not today.
 
 ###Prodigal.py
 
-Annotate takes a SeqIO record iterator and runs it through prodigal to reannotate all the genes, preserving ones that overlap significantly with annotations already in the file. This is a bit rude but they can be patchy or missing or just inconsistent.
+Annotate takes a SeqIO record iterator and runs it through prodigal to reannotate all the genes, preserving ones that overlap significantly with annotations already in the file.
 
 
 #####`annotate(gbrecord,preserve_anno=False)`

@@ -28,6 +28,7 @@ class AssimilateTest(ut.TestCase):
 		from time import time
 		before = time()
 		ng = assimilate_from_ncbi(self.testgbfile)
+		self.assertEqual(ng.binomial(),"Brachybacterium phenoliresistens")
 		assem = next(ng.assemblies())
 		from karkadann.database import get_cursor
 

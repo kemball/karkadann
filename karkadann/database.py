@@ -259,15 +259,23 @@ class Contig(dbThing):
 		self._seq = seq
 		self._assembly_id = assembly and assembly.is_real() or None
 		self._acc = accession or ""
+	
 
 	@classmethod
 	def get_many(cls, db_ids):
-		with get_cursor() as cur:
-			for db_id in db_ids:
-				cur.execute("select id,sequence,assembly_id,accession from contigs where id = %s;", (db_id,))
-				ncont = cls()
-				ncont._id, ncont._seq, ncont._assembly_id, ncont._acc = cur.fetchone()
-				yield ncont
+		def chunk(iter,length):
+			iterlist = list(iter)
+			while len(iterlist)>0:
+				yield iterlist[:length]
+				iterlist[:length] = []
+		for idchunk in chunk(db_ids,1000):
+			with get_cursor() as cur:
+				query = ",".join(["%s"*len(idchunk)])
+				cur.execute("select id,sequence,assembly_id,accession from contigs where id in (%s);"% query,tuple(idchunk))
+				for res in cur.fetchall():
+					ncont = cls()
+					ncont._id, ncont._seq, ncont._assembly_id, ncont._acc = res
+					yield ncont
 
 	@cursor_required
 	def save(self, cur=None):

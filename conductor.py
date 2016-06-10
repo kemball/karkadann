@@ -30,7 +30,7 @@ parser.add_argument("--orthogroup",action="store_true", help="do allvall blast a
                                                              " 'cluster' to just do genes in an identified cluster")
 parser.add_argument("--promer",action="store_true",help="calculate all uncalculated promer scores for clusters.")
 
-parser.add_argument("--uclust",choices = karkadann.cluster_call.types_of_clusters,help="calculate the domain_max scores"
+parser.add_argument("--uclust",choices = karkadann.cluster_call.types_of_clusters+["all"],help="calculate the domain_max scores"
                                                                                        " for a specified class of cluster. ")
 args = parser.parse_args()
 
@@ -63,7 +63,7 @@ elif args.call:
 					" join hits on hits.gene =genes.id join clusters on clusters.gene= genes.id "
 					"where clusters.id is null and hits.id is not null;")
 		contigs = list(Contig.get_many([x for (x,) in cur.fetchall()]))
-	print "%s contigs detected, calling clusters in them..." % len(contigs)
+	print "%s uncalled contigs detected, calling clusters in them..." % len(contigs)
 	p = mp.Pool(processes=args.cores)
 	p.map(call_clusters,contigs)
 	p.close()
@@ -93,12 +93,15 @@ elif args.promer:
 		arglist.append((ca,cb))
 	p.map(splat_promer,arglist)
 elif args.uclust:
-	calc_domain_max(args.uclust)
+	if args.uclust =="all":
+		for clusttype in karkadann.cluster_call.types_of_clusters:
+			calc_domain_max(clusttype)
+	else:
+		calc_domain_max(args.uclust)
 
 
 files = sp.check_output("ls /home/kemball/diatom/plum/*.gb", shell=True).split()
 
-raw_input("got to where I think I should be")
 
 
 def doroghazi_metric(clustera,clusterb):
