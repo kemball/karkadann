@@ -377,6 +377,7 @@ class ClusterTest(ut.TestCase):
 			self.assertTrue(othercluster.is_real())
 			self.assertEqual(newcluster._kind, othercluster._kind)
 			self.assertEqual(newcluster._kind, 'testclass')
+			self.assertEqual(newcluster.name,othercluster.name)
 		finally:
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())

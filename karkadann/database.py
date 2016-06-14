@@ -259,7 +259,7 @@ class Contig(dbThing):
 		self._seq = seq
 		self._assembly_id = assembly and assembly.is_real() or None
 		self._acc = accession or ""
-	
+
 
 	@classmethod
 	def get_many(cls, db_ids):
@@ -539,6 +539,17 @@ class Cluster(dbThing):
 	def gene_list(self):
 		return self._gene_list
 
+	@property
+	def name(self):
+		if self.is_real():
+			with get_cursor() as cur:
+				cur.execute("select name from cluster_names where id = %s;",(self._id,))
+				res = cur.fetchone()
+				if res:
+					return res
+				else:
+					return ""
+
 	@cursor_required
 	def is_real(self, cur=None):
 		if self._id:
@@ -551,12 +562,14 @@ class Cluster(dbThing):
 	def save(self, cur=None):
 		if not self.is_real():
 			# doesn't have to be unique
-			cur.execute("select genomes.id from genomes join assemblies on assemblies.genome_id=genomes.id "
+			cur.execute("select genomes.id,genomes.name from genomes join assemblies on assemblies.genome_id=genomes.id "
 			            "join contigs on contigs.assembly_id=assemblies.id "
 			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self._gene_list[0].is_real(),))
-			genome_id = cur.fetchone()[0]
+			genome_id,gname = cur.fetchone()
 			# TODO munge this for uniqueness and QOL
-			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (self._kind, genome_id))
+			cur.execute("select count(*) from cluster_names where name like %s;",(gname+"%",))
+			count = cur.fetchone()[0]
+			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (gname+self._kind+str(count), genome_id))
 			self._id = cur.lastrowid
 			for gene in self._gene_list:
 				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
