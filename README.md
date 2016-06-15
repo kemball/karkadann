@@ -16,9 +16,23 @@ A complete rewrite of the GCF software and pipeline.
 
 ##Usage
 
+`python conductor.py --help` will show all the options available, but more details are available here.
+
+`--genome` instructs karkadann to add a new genome to its internal database. Something like `python conductor.py --genome whatever.fasta --fasta` will work. Genbank files are also accepted, with the option '--genbank'. If you forget to specify which format it will stop and ask you which you meant. If you have fasta files and genbank files you'll need to import them separately(`python conductor.py one.fasta --fasta` and `python conductor.py two.gb --genbank`). Sorry.
+
+`--scan` instructs karkadann to scan all the unscanned genomes with its library of pHHMs. You can specify where to look for pHMMs in the config file `karkadann.cfg`.
+
+`--call` instructs karkadann to call gene clusters in genomes that have been scanned with HMMS but not had clusters called.
+
+`--orthogroup` **WARNING EXPENSIVE** instructs karkadann to assign orthogroups to all genes. `--orthogroup cluster` will only assign orthogroups to genes in a called cluster. This requires an allvall blast which is not nippy. 
+
+`--promer` Calculates promer scores for all clusters. Pretty quick, and will cache promer results for all the genomes, so if you've added new clusters it'll just do the new pairs. And only one way around.
+
+`--uclust` This is a weird one. Calculates the maximum identity where 50% of the domains in a gene cluster cluster across the cluster boundary. You can calculate the score for a particular type of gene cluster(list of kinds provided the help message) like this `python conductor.py --uclust nrps` or you can calculate all the kinds with `python conductor.py --uclust all`.
 
 
-#Developem
+
+#Development details
 I've documented all the function signatures here but the API is still half-baked and subject to change. At some point there'll be a set of functions that are available for export and guaranteed not to change, but that point is not today.
 
 ###Prodigal.py

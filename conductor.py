@@ -26,7 +26,7 @@ parser.add_argument("--scan",action="store_true",help="scan all unscanned genome
 
 parser.add_argument("--call",action="store_true",help="call gene clusters in scanned genomes")
 
-parser.add_argument("--orthogroup",action="store_true", help="do allvall blast and declare orthogroups for genes."
+parser.add_argument("--orthogroup",choices = ["cluster","all"], help="do allvall blast and declare orthogroups for genes."
                                                              " 'cluster' to just do genes in an identified cluster")
 parser.add_argument("--promer",action="store_true",help="calculate all uncalculated promer scores for clusters.")
 
