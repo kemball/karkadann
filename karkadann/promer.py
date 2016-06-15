@@ -35,8 +35,8 @@ def _parse_delta(deltafilename):
 
 def promer_score(clustera, clusterb):
 	from database import get_cursor
-	ida = clustera.is_real()
-	idb = clusterb.is_real()
+	ida = clustera._id
+	idb = clusterb._id
 	if ida==idb:
 		return 1
 	if not ida or not idb:
