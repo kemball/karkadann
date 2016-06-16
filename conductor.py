@@ -100,7 +100,6 @@ elif args.uclust:
 		calc_domain_max(args.uclust)
 
 
-files = sp.check_output("ls /home/kemball/diatom/plum/*.gb", shell=True).split()
 
 
 
