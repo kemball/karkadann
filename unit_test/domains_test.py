@@ -37,7 +37,7 @@ class mclTest(ut.TestCase):
 	def test_parsing(self):
 		print "test_parsing"
 		with get_cursor() as cur:
-			cur.execute("select id from genes limit 1000;")
+			cur.execute("select id from genes limit 10000;")
 			records = [Gene.get(x).record for (x,) in cur.fetchall()]
 			gtext = _call_mcl(records)
 			parse_groups(gtext)

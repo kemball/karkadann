@@ -3,7 +3,7 @@ import subprocess as sp
 from time import time
 import karkadann
 from karkadann.promer import promer_score
-from karkadann.database import get_cursor, Cluster,Gene,Assembly,Contig,domain_max,num_cores
+from karkadann.database import *
 from karkadann.assimilate import assimilate_from_ncbi,assimilate_from_fasta
 from karkadann.hmm import scan_assembly
 from karkadann.cluster_call import call_clusters
@@ -15,7 +15,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--cores',default= num_cores,type=int,help="number of cores to use. Default all.")
-
+parser.add_argument('--force',action="store_true",help="Try extra hard to do things.")
 
 inputtype = parser.add_mutually_exclusive_group()
 inputtype.add_argument('--fasta', action="store_true",help="Specify a file is in fasta format")
@@ -32,6 +32,9 @@ parser.add_argument("--promer",action="store_true",help="calculate all uncalcula
 
 parser.add_argument("--uclust",choices = karkadann.cluster_call.types_of_clusters+["all"],help="calculate the domain_max scores"
                                                                                        " for a specified class of cluster. ")
+
+parser.add_argument("--table",choices=["clusters","genomes"],help="prints a tab-separated table of information about what you asked for.")
+
 args = parser.parse_args()
 
 if args.cores:
@@ -44,9 +47,10 @@ if args.genome:
 	elif args.genbank:
 		genomes = p.map(assimilate_from_ncbi,args.genome)
 	else:
-		parser.error("What kind of genome file is that? I'm not equipped to guess.")
+		parser.error("What kind of genome file is that? I'm not prepared to guess.")
 	p.close()
 elif args.scan:
+	before = time()
 	with get_cursor() as cur:
 		cur.execute("select distinct a.id from assemblies as a where a.id not in "
 		            "(select distinct assembly_id from contigs join genes on genes.contig=contigs.id "
@@ -56,18 +60,31 @@ elif args.scan:
 	p = mp.Pool(processes= max(args.cores//3,len(assems)))
 	p.map(scan_assembly,assems)
 	p.close()
+	print "%s assemblies scanned in %s seconds." %(len(assems),before-time())
 
 elif args.call:
-	with get_cursor() as cur:
-		cur.execute("select distinct contigs.id from contigs join genes on genes.contig=contigs.id "
-					" join hits on hits.gene =genes.id join clusters on clusters.gene= genes.id "
-					"where clusters.id is null and hits.id is not null;")
-		contigs = list(Contig.get_many([x for (x,) in cur.fetchall()]))
-	print "%s uncalled contigs detected, calling clusters in them..." % len(contigs)
+	before = time()
+	if not args.force:
+		with get_cursor() as cur:
+			cur.execute("select distinct contigs.id from contigs join genes on genes.contig=contigs.id "
+						" join hits on hits.gene =genes.id join clusters on clusters.gene= genes.id "
+						"where clusters.id is null and hits.id is not null;")
+			contigs = list(Contig.get_many([x for (x,) in cur.fetchall()]))
+		print "%s uncalled contigs detected, calling clusters in them..." % len(contigs)
+	else:
+		with get_cursor() as cur:
+			cur.execute("select distinct contigs.id from contigs;")
+			contigs = list(Contig.get_many([x for (x,) in cur.fetchall()]))
+		for contig in contigs:
+			for clust in contig.clusters():
+				clust.delete()
+		print "%s contigs detected, re-calling clusters in them..."
 	p = mp.Pool(processes=args.cores)
 	p.map(call_clusters,contigs)
 	p.close()
+	print "Completed successfully in %s seconds." %(time()-before)
 elif args.orthogroup:
+	before= time()
 	if args.orthogroup=="cluster":
 		with get_cursor() as cur:
 			cur.execute("select distinct gene from clusters;")
@@ -80,7 +97,9 @@ elif args.orthogroup:
 		genes = []
 		parser.exit("Which genes should I calculate orthogroups for? options are 'cluster' and 'all'")
 	assign_groups(genes)
+	print "assigned orthogroups in %s seconds" %(before-time())
 elif args.promer:
+	before = time()
 	with get_cursor() as cur:
 		cur.execute("select distinct id from clusters;")
 		clusters = list(Cluster.get_many([x for (x,) in cur.fetchall()]))
@@ -92,12 +111,37 @@ elif args.promer:
 	for ca,cb in combinations(clusters,2):
 		arglist.append((ca,cb))
 	p.map(splat_promer,arglist)
+	p.close()
+	print "%s promer scores calculated in %s seconds" %(len(arglist),time()-before)
 elif args.uclust:
+	before = time()
 	if args.uclust =="all":
 		for clusttype in karkadann.cluster_call.types_of_clusters:
+			typebefore = time()
 			calc_domain_max(clusttype)
+			print "cluster type %s took %s seconds." %(clusttype,time()-typebefore)
 	else:
+		typebefore = time()
 		calc_domain_max(args.uclust)
+		print "cluster type %s took %s seconds." %(args.uclust,time()-typebefore)
+	print "Finished uclustering successfully. %s seconds."%(time()-before)
+elif args.table:
+	if args.table=="clusters":
+		with get_cursor() as cur:
+			cur.execute("select distinct id from clusters;")
+			clusters = Cluster.get_many([x for (x,) in cur.fetchall()])
+		print "identity\tname\tkind"
+		for clust in clusters:
+			print "\t".join([str(clust._id),clust.name,clust._kind])
+	elif args.table=="genomes":
+		with get_cursor() as cur:
+			cur.execute("select distinct id from genomes;")
+			genomes = Genome.get_many([x for (x,) in cur.fetchall()])
+		print "identity\tname\tgenus species"
+		for g in genomes:
+			print "\t".join([str(g._id),g._name,g.binomial()])
+else:
+	print "Sorry, I'm not sure what you're asking me to do."
 
 
 

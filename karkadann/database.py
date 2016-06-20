@@ -167,7 +167,8 @@ class Genome(dbThing):
 			cur.execute("insert into genus_species (genome_id,binomial) values (%s,%s);", (self._id, binomial))
 		else:
 			cur.execute("select binomial from genus_species where genome_id=%s;", (self._id,))
-			return cur.fetchone()[0]
+			results = cur.fetchone()
+			return results and results[0] or ""
 
 	def assemblies(self):
 		with get_cursor() as cur:
@@ -506,11 +507,16 @@ class Hit(dbThing):
 
 
 class Cluster(dbThing):
-	def __init__(self, gene_list=[], classification=None):
+	def __init__(self, gene_list=[], classification=None,name=None):
 
 		self._gene_list = gene_list
 		self._id = None
 		self._kind = classification
+		if name is None:
+			self._name=self._kind
+		else:
+			self._name = name
+
 
 	@classmethod
 	def get_many(cls, db_ids):
@@ -546,7 +552,7 @@ class Cluster(dbThing):
 				cur.execute("select name from cluster_names where id = %s;",(self._id,))
 				res = cur.fetchone()
 				if res:
-					return res
+					return res[0]
 				else:
 					return ""
 
@@ -566,11 +572,11 @@ class Cluster(dbThing):
 			            "join contigs on contigs.assembly_id=assemblies.id "
 			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self._gene_list[0].is_real(),))
 			genome_id,gname = cur.fetchone()
-			# TODO munge this for uniqueness and QOL
 			cur.execute("select count(*) from cluster_names where name like %s;",(gname+"%",))
 			count = cur.fetchone()[0]
-			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (gname+self._kind+str(count), genome_id))
+			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (gname+self._name+str(count), genome_id))
 			self._id = cur.lastrowid
+			# TODO make this into a multi-insert.
 			for gene in self._gene_list:
 				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
 				            (self._id, self._kind, gene.is_real()))

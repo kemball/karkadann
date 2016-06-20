@@ -71,6 +71,11 @@ def _call_mcl(prot_records):
 		f.write(str(os.getpid()))
 		print "waited on orthomcl lock for %s seconds" % (time() - before)
 		try:
+			# up number of locks 100x so that orthomcl doesn't fail
+			up_lock_pool = """\
+			set @inndb_buff_pool_size = 838860800;
+			"""
+			sp.call("mysql -e' %s' -u %s -p%s %s" % (up_lock_pool, user, password, db), shell=True)
 			sp.call(
 				"%s/bin/orthomclInstallSchema %s/orthomcl.config orthomcl.log" % (orthomcl_location, orthomcl_location),
 				shell=True)
