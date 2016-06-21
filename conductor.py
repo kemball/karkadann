@@ -35,6 +35,10 @@ parser.add_argument("--uclust",choices = karkadann.cluster_call.types_of_cluster
 
 parser.add_argument("--table",choices=["clusters","genomes"],help="prints a tab-separated table of information about what you asked for.")
 
+parser.add_argument("--network",choices=["D","all"],help="prints a tsv file suitable for cytoscape import of the metric specified")
+
+parser.add_argument("--type",choices=karkadann.cluster_call.types_of_clusters,help="filter results by a specific cluster type. Applies to table and network output")
+
 args = parser.parse_args()
 
 if args.cores:
@@ -78,7 +82,7 @@ elif args.call:
 		for contig in contigs:
 			for clust in contig.clusters():
 				clust.delete()
-		print "%s contigs detected, re-calling clusters in them..."
+		print "%s contigs detected, re-calling clusters in them..." % len(contigs)
 	p = mp.Pool(processes=args.cores)
 	p.map(call_clusters,contigs)
 	p.close()
@@ -127,9 +131,14 @@ elif args.uclust:
 	print "Finished uclustering successfully. %s seconds."%(time()-before)
 elif args.table:
 	if args.table=="clusters":
-		with get_cursor() as cur:
-			cur.execute("select distinct id from clusters;")
-			clusters = Cluster.get_many([x for (x,) in cur.fetchall()])
+		if not args.type:
+			with get_cursor() as cur:
+				cur.execute("select distinct id from clusters;")
+				clusters = Cluster.get_many([x for (x,) in cur.fetchall()])
+		else:
+			with get_cursor() as cur:
+				cur.execute("select distinct id from clusters where classification=%s",(args.type,))
+				clusters = Cluster.get_many([x for (x,) in cur.fetchall()])
 		print "identity\tname\tkind"
 		for clust in clusters:
 			print "\t".join([str(clust._id),clust.name,clust._kind])
@@ -140,13 +149,25 @@ elif args.table:
 		print "identity\tname\tgenus species"
 		for g in genomes:
 			print "\t".join([str(g._id),g._name,g.binomial()])
+elif args.network:
+
+	def doroghazi_metric(clustera,clusterb):
+		total =  ortho_score(clustera,clusterb)+2.0*domain_max(clustera,clusterb)+promer_score(clustera,clusterb)
+		return total/4.0
+
+	if args.network=="D":
+		if not args.type:
+			parser.exit("A type is required to output D metrics.")
+		clusters = Cluster.by_kind(args.type)
+		for (ca,cb) in combinations(clusters,2):
+			oscore = ortho_score(ca,cb)
+			dmaxscore = domain_max(ca,cb)
+			pscore = promer_score(ca,cb)
+			row = [ca._id,ca.name,"D-metric",cb._id,cb.name,doroghazi_metric(ca,cb),oscore,dmaxscore,pscore]
+			print "\t".join(map(str,row))
 else:
 	print "Sorry, I'm not sure what you're asking me to do."
 
 
 
 
-
-def doroghazi_metric(clustera,clusterb):
-	total =  ortho_score(clustera,clusterb)+2.0*domain_max(clustera,clusterb)+promer_score(clustera,clusterb)
-	return total/4.0

@@ -271,8 +271,9 @@ class Contig(dbThing):
 				iterlist[:length] = []
 		for idchunk in chunk(db_ids,1000):
 			with get_cursor() as cur:
-				query = ",".join(["%s"*len(idchunk)])
-				cur.execute("select id,sequence,assembly_id,accession from contigs where id in (%s);"% query,tuple(idchunk))
+				inphrase = ",".join(["%s"]*len(idchunk))
+				query ="select id,sequence,assembly_id,accession from contigs where id in (%s);"%inphrase
+				cur.execute(query,tuple(idchunk))
 				for res in cur.fetchall():
 					ncont = cls()
 					ncont._id, ncont._seq, ncont._assembly_id, ncont._acc = res
@@ -522,16 +523,17 @@ class Cluster(dbThing):
 	def get_many(cls, db_ids):
 		with get_cursor() as cur:
 			for db_id in db_ids:
-				ncl = Cluster()
 
 				cur.execute("select gene,classification from clusters where id = %s;", (db_id,))
-
+				thiskind = "unknown"
 				gids = []
 				for g, c in cur.fetchall():
 					gids.append(g)
 					if c:
-						ncl._kind = c
-				ncl._gene_list = list(Gene.get_many(gids))
+						thiskind = c
+				cur.execute("select name,genome from cluster_names where id = %s;",(db_id,))
+				(name,gname) = cur.fetchone()
+				ncl = Cluster(gene_list = list(Gene.get_many(gids)),classification=thiskind,name=name)
 				ncl._id = db_id
 				yield ncl
 
@@ -547,19 +549,13 @@ class Cluster(dbThing):
 
 	@property
 	def name(self):
-		if self.is_real():
-			with get_cursor() as cur:
-				cur.execute("select name from cluster_names where id = %s;",(self._id,))
-				res = cur.fetchone()
-				if res:
-					return res[0]
-				else:
-					return ""
+		if self._id:
+			return self._name
 
 	@cursor_required
 	def is_real(self, cur=None):
 		if self._id:
-			cur.execute("select id from cluster_names where id = %s;", (self._id,))
+			cur.execute("select id from clusters where id = %s;", (self._id,))
 			for r in cur.fetchall():
 				return self._id
 		return None
@@ -576,10 +572,8 @@ class Cluster(dbThing):
 			count = cur.fetchone()[0]
 			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (gname+self._name+str(count), genome_id))
 			self._id = cur.lastrowid
-			# TODO make this into a multi-insert.
-			for gene in self._gene_list:
-				cur.execute("insert into clusters (id,classification,gene) values (%s,%s,%s);",
-				            (self._id, self._kind, gene.is_real()))
+			cur.executemany("insert into clusters (id,classification,gene) values (%s,%s,%s);",
+				            [(self._id, self._kind, gene.is_real()) for gene in self._gene_list])
 
 	@cursor_required
 	def delete(self, cur=None):
