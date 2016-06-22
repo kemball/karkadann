@@ -61,7 +61,7 @@ elif args.scan:
 		            "join hits on hits.gene = genes.id);")
 		assems = Assembly.get_many([x for (x,) in cur.fetchall()])
 	assems = list(assems)
-	p = mp.Pool(processes= max(args.cores//3,len(assems)))
+	p = mp.Pool(processes= min(args.cores//3,len(assems)))
 	p.map(scan_assembly,assems)
 	p.close()
 	print "%s assemblies scanned in %s seconds." %(len(assems),before-time())
@@ -164,7 +164,8 @@ elif args.network:
 			dmaxscore = domain_max(ca,cb)
 			pscore = promer_score(ca,cb)
 			row = [ca._id,ca.name,"D-metric",cb._id,cb.name,doroghazi_metric(ca,cb),oscore,dmaxscore,pscore]
-			print "\t".join(map(str,row))
+			if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
+				print "\t".join(map(str,row))
 else:
 	print "Sorry, I'm not sure what you're asking me to do."
 
