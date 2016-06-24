@@ -44,6 +44,10 @@ args = parser.parse_args()
 if args.cores:
 	karkadann.database.num_cores = args.cores
 
+with get_cursor() as cur:
+	cur.execute("set @max_connections = 10000;")
+
+
 if args.genome:
 	p = mp.Pool(processes=args.cores)
 	if args.fasta:
@@ -53,7 +57,7 @@ if args.genome:
 	else:
 		parser.error("What kind of genome file is that? I'm not prepared to guess.")
 	p.close()
-elif args.scan:
+if args.scan:
 	before = time()
 	with get_cursor() as cur:
 		cur.execute("select distinct a.id from assemblies as a where a.id not in "
@@ -66,7 +70,7 @@ elif args.scan:
 	p.close()
 	print "%s assemblies scanned in %s seconds." %(len(assems),before-time())
 
-elif args.call:
+if args.call:
 	before = time()
 	if not args.force:
 		with get_cursor() as cur:
@@ -87,7 +91,7 @@ elif args.call:
 	p.map(call_clusters,contigs)
 	p.close()
 	print "Completed successfully in %s seconds." %(time()-before)
-elif args.orthogroup:
+if args.orthogroup:
 	before= time()
 	if args.orthogroup=="cluster":
 		with get_cursor() as cur:
@@ -102,7 +106,7 @@ elif args.orthogroup:
 		parser.exit("Which genes should I calculate orthogroups for? options are 'cluster' and 'all'")
 	assign_groups(genes)
 	print "assigned orthogroups in %s seconds" %(before-time())
-elif args.promer:
+if args.promer:
 	before = time()
 	with get_cursor() as cur:
 		cur.execute("select distinct id from clusters;")
@@ -117,7 +121,7 @@ elif args.promer:
 	p.map(splat_promer,arglist)
 	p.close()
 	print "%s promer scores calculated in %s seconds" %(len(arglist),time()-before)
-elif args.uclust:
+if args.uclust:
 	before = time()
 	if args.uclust =="all":
 		for clusttype in karkadann.cluster_call.types_of_clusters:
@@ -129,7 +133,7 @@ elif args.uclust:
 		calc_domain_max(args.uclust)
 		print "cluster type %s took %s seconds." %(args.uclust,time()-typebefore)
 	print "Finished uclustering successfully. %s seconds."%(time()-before)
-elif args.table:
+if args.table:
 	if args.table=="clusters":
 		if not args.type:
 			with get_cursor() as cur:
@@ -149,7 +153,7 @@ elif args.table:
 		print "identity\tname\tgenus species"
 		for g in genomes:
 			print "\t".join([str(g._id),g._name,g.binomial()])
-elif args.network:
+if args.network:
 
 	def doroghazi_metric(clustera,clusterb):
 		total =  ortho_score(clustera,clusterb)+2.0*domain_max(clustera,clusterb)+promer_score(clustera,clusterb)
@@ -166,8 +170,6 @@ elif args.network:
 			row = [ca._id,ca.name,"D-metric",cb._id,cb.name,doroghazi_metric(ca,cb),oscore,dmaxscore,pscore]
 			if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
 				print "\t".join(map(str,row))
-else:
-	print "Sorry, I'm not sure what you're asking me to do."
 
 
 

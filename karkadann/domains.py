@@ -73,7 +73,7 @@ def _call_mcl(prot_records):
 		try:
 			# up number of locks 100x so that orthomcl doesn't fail
 			up_lock_pool = """\
-			set @inndb_buff_pool_size = 838860800;
+			set @innodb_buff_pool_size = 838860800;
 			"""
 			sp.call("mysql -e' %s' -u %s -p%s %s" % (up_lock_pool, user, password, db), shell=True)
 			sp.call(
