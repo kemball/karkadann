@@ -108,9 +108,14 @@ if args.orthogroup:
 	print "assigned orthogroups in %s seconds" %(before-time())
 if args.promer:
 	before = time()
-	with get_cursor() as cur:
-		cur.execute("select distinct id from clusters;")
-		clusters = list(Cluster.get_many([x for (x,) in cur.fetchall()]))
+	if not args.type:
+		with get_cursor() as cur:
+			cur.execute("select distinct id from clusters;")
+			clusters = list(Cluster.get_many([x for (x,) in cur.fetchall()]))
+	else:
+		with get_cursor() as cur:
+			cur.execute("select distinct id from clusters where classification=%s;",(args.type,))
+			clusters = list(Cluster.get_many([x for (x,) in cur.fetchall()]))
 
 	def splat_promer(args):
 		return promer_score(*args)
