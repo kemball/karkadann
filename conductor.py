@@ -168,13 +168,19 @@ if args.network:
 		if not args.type:
 			parser.exit("A type is required to output D metrics.")
 		clusters = Cluster.by_kind(args.type)
-		for (ca,cb) in combinations(clusters,2):
+		print "\t".join(["caid","caname","metric","cbid","cbname","D","orthoscore","domain_maxscore","promerscore"])
+		def threadlet((ca,cb)):
 			oscore = ortho_score(ca,cb)
 			dmaxscore = domain_max(ca,cb)
 			pscore = promer_score(ca,cb)
 			row = [ca._id,ca.name,"D-metric",cb._id,cb.name,doroghazi_metric(ca,cb),oscore,dmaxscore,pscore]
-			if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
-				print "\t".join(map(str,row))
+			# if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
+			return "\t".join(map(str,row))
+		p = mp.Pool(processes=args.cores)
+		for result in p.map(threadlet,combinations(clusters,2)):
+			if result:
+				print result
+
 
 
 
