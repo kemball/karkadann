@@ -60,7 +60,7 @@ def promer_score(clustera, clusterb):
 
 
 def _call_promer(fasta1, fasta2):
-	promer_sandbox = mkdtemp()
+	promer_sandbox = mkdtemp(prefix='/dev/shm/')
 	try:
 		os.chdir(promer_sandbox)
 		SeqIO.write(fasta1, 'one.fna', 'fasta')
