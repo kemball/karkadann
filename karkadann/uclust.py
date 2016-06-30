@@ -106,10 +106,12 @@ def calc_domain_max(cluster_kind):
 
 			score /=(len(ahits) + len(bhits)+0.0)
 			if score>=.5:
-				domain_max_dict[(gca,gcb)] = identity
-				tosave.append((gca,gcb,identity))
-		print "there are %s clusters to save" %len(tosave)
-		save_domain_max_many(tosave)
+				if identity>domain_max_dict[(gca,gcb)]:
+					domain_max_dict[(gca,gcb)] = identity
+	for (gca,gcb) in domain_max_dict.keys():
+		tosave.append((gca,gcb,domain_max_dict[(gca,gcb)]))
+	print "there are %s clusters to save" %len(tosave)
+	save_domain_max_many(tosave)
 	return domain_max_dict
 
 

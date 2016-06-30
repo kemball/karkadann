@@ -58,12 +58,12 @@ class uclustTest(ut.TestCase):
 		with get_cursor() as cur:
 			cur.execute("select distinct id from clusters where classification='nrps' limit 2;")
 			clusters = [Cluster.get(db_id) for (db_id,) in cur.fetchall()]
-			if not clusters:
-				return
-			# TODO test whether domain_max actually calculates anything
-			self.assertGreaterEqual(domain_max(clusters[0],clusters[1]),0)
-			self.assertEqual(domain_max(*clusters),domain_max(clusters[1],clusters[0]))
-			self.assertEqual(domain_max(clusters[0],clusters[0]),1.0)
+		if not clusters:
+			return
+		# TODO test whether domain_max actually calculates anything
+		self.assertGreaterEqual(domain_max(clusters[0],clusters[1]),0)
+		self.assertEqual(domain_max(*clusters),domain_max(clusters[1],clusters[0]))
+		self.assertEqual(domain_max(clusters[0],clusters[0]),1.0)
 
 
 
