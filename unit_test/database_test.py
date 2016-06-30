@@ -416,5 +416,22 @@ class ClusterTest(ut.TestCase):
 		self.assertFalse(othercluster.is_real())
 
 
+class domainTest(ut.TestCase):
+	def test_domain_write(self):
+		with get_cursor() as cur:
+			cur.execute("select distinct id from genes limit 5;")
+			genes = list(Gene.get_many([x for (x,) in cur.fetchall()]))
+		one = Cluster(gene_list=genes,classification="testclass",name="notreal")
+		one.save()
+		two = Cluster(gene_list=genes,classification="testclass",name="fake")
+		two.save()
+		save_domain_max(one,two,1.0)
+		self.assertEquals(domain_max(two,one),domain_max(one,two))
+		self.assertEqual(domain_max(one,two),1.0)
+		save_domain_max(two,one,.5)
+		self.assertEqual(domain_max(one,two),.5)
+		two.delete()
+		one.delete()
+
 if __name__ == "__main__":
 	ut.main()

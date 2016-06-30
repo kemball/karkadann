@@ -60,6 +60,7 @@ class uclustTest(ut.TestCase):
 			clusters = [Cluster.get(db_id) for (db_id,) in cur.fetchall()]
 			if not clusters:
 				return
+			# TODO test whether domain_max actually calculates anything
 			self.assertGreaterEqual(domain_max(clusters[0],clusters[1]),0)
 			self.assertEqual(domain_max(*clusters),domain_max(clusters[1],clusters[0]))
 			self.assertEqual(domain_max(clusters[0],clusters[0]),1.0)

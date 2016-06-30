@@ -55,16 +55,17 @@ def calc_domain_max(cluster_kind):
 		raise ValueError("I don't know how to deal with cluster class %s" % cluster_kind)
 	clusters = list(Cluster.by_kind(cluster_kind))
 	domain_max_dict = {}
+	all_cached = True
 	for gca,gcb in itertools.combinations(clusters,2):
 		# flip through all the clusters, if we have domain_max scores for all of them, just return that.
 		# if we don't, recalculate them.
 		curscore = domain_max(gca,gcb)
 		if curscore is None:
-			break
+			all_cached = False
 		else:
 			domain_max_dict[(gca,gcb)] = curscore
 
-	else:
+	if all_cached:
 		return domain_max_dict
 	relevanthits = []
 	hitsbyclust = defaultdict(list)
@@ -107,6 +108,7 @@ def calc_domain_max(cluster_kind):
 			if score>=.5:
 				domain_max_dict[(gca,gcb)] = identity
 				tosave.append((gca,gcb,identity))
+		print "there are %s clusters to save" %len(tosave)
 		save_domain_max_many(tosave)
 	return domain_max_dict
 

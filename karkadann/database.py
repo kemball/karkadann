@@ -513,10 +513,7 @@ class Cluster(dbThing):
 		self._gene_list = gene_list
 		self._id = None
 		self._kind = classification
-		if name is None:
-			self._name=self._kind
-		else:
-			self._name = name
+		self._name = name
 
 
 	@classmethod
@@ -565,13 +562,19 @@ class Cluster(dbThing):
 		if not self.is_real():
 			# doesn't have to be unique
 			cur.execute("select genomes.id,genomes.name from genomes join assemblies on assemblies.genome_id=genomes.id "
-			            "join contigs on contigs.assembly_id=assemblies.id "
-			            "join genes on genes.contig=contigs.id where genes.id=%s;", (self._gene_list[0].is_real(),))
+				            "join contigs on contigs.assembly_id=assemblies.id "
+				            "join genes on genes.contig=contigs.id where genes.id=%s;", (self._gene_list[0].is_real(),))
 			genome_id,gname = cur.fetchone()
-			cur.execute("select count(*) from cluster_names where name like %s;",(gname+"%",))
-			count = cur.fetchone()[0]
-			cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (gname+self._name+str(count), genome_id))
-			self._id = cur.lastrowid
+			if not self._name:
+				cur.execute("select count(*) from cluster_names where name like %s;",(gname+"%",))
+				count = cur.fetchone()[0]
+				name = gname+self._kind+str(count)
+				cur.execute("insert into cluster_names (name,genome) values (%s,%s);", (name, genome_id))
+				self._name=name
+				self._id = cur.lastrowid
+			else:
+				cur.execute("insert into cluster_names (name,genome) values(%s,%s);",(self._name,genome_id))
+				self._id = cur.lastrowid
 			cur.executemany("insert into clusters (id,classification,gene) values (%s,%s,%s);",
 				            [(self._id, self._kind, gene.is_real()) for gene in self._gene_list])
 
@@ -659,4 +662,4 @@ def domain_max(clustera, clusterb):
 		cur.execute("select score from domain_max where l = %s and r = %s;", (l, r))
 		for result in cur.fetchall():
 			return result[0]
-		return 0.0
+		return None
