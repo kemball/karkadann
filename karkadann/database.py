@@ -645,9 +645,16 @@ def save_domain_max_many(cci_iterator):
 			# left should be larger. Shouldn't matter.
 			l, r = r, l
 		return identity,l,r
-	params = [normalized(*x) for x in cci_iterator]
-	with get_cursor() as cur:
-		cur.executemany("replace into domain_max (score,l,r) values (%s,%s,%s);", params)
+	params = (normalized(*x) for x in cci_iterator)
+
+	def chunk(iter,length):
+		iterlist = list(iter)
+		while len(iterlist)>0:
+			yield iterlist[:length]
+			iterlist[:length] = []
+	for chunk_of_params in chunk(params,1000):
+		with get_cursor() as cur:
+			cur.executemany("replace into domain_max (score,l,r) values (%s,%s,%s);", chunk_of_params)
 
 
 def domain_max(clustera, clusterb):
