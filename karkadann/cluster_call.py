@@ -1,4 +1,4 @@
-from database import Hit,Gene,Cluster
+from database import Hit,Gene,Cluster,get_cursor
 from collections import defaultdict
 
 def _classify(gene):
@@ -53,6 +53,7 @@ def _classify(gene):
 	if s['TOMM']>25:
 		return "TOMMdocking"
 
+
 types_of_clusters = [
 	"PKS_I",
 	"PKS_I_transAT",
@@ -75,6 +76,14 @@ types_of_clusters = [
 	"lant_c_jd",
 	"TOMMdocking"
 ]
+with get_cursor() as cur:
+	cur.execute("select distinct classification from clusters;")
+	for (result,) in cur.fetchall():
+		if result not in types_of_clusters:
+			types_of_clusters.append(result)
+
+
+
 
 def call_clusters(contig):
 	genes = list(contig.genes())
