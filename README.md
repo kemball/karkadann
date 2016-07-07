@@ -22,15 +22,32 @@ A complete rewrite of the GCF software and pipeline.
 
 `--scan` instructs karkadann to scan all the unscanned genomes with its library of pHHMs. You can specify where to look for pHMMs in the config file `karkadann.cfg`.
 
-`--call` instructs karkadann to call gene clusters in genomes that have been scanned with HMMS but not had clusters called.
+`--call` instructs karkadann to call gene clusters in genomes that have been scanned with HMMS but not had clusters called. If you would like to throw out the current cluster calls add `--force`.
 
 `--orthogroup` **WARNING EXPENSIVE** instructs karkadann to assign orthogroups to all genes. `--orthogroup cluster` will only assign orthogroups to genes in a called cluster. This requires an allvall blast which is not nippy. 
 
-`--promer` Calculates promer scores for all clusters. Pretty quick, and will cache promer results for all the genomes, so if you've added new clusters it'll just do the new pairs. And only one way around.
+`--promer` Calculates promer scores for all clusters. Pretty quick, and will cache promer results for all the genomes, so if you've added new clusters it'll just do the new pairs. And only one way around. If you would like to do just one type of genome because you're in a hurry do '--type \<whatever\>'
 
 `--uclust` This is a weird one. Calculates the maximum identity where 50% of the domains in a gene cluster cluster across the cluster boundary. You can calculate the score for a particular type of gene cluster(list of kinds provided the help message) like this `python conductor.py --uclust nrps` or you can calculate all the kinds with `python conductor.py --uclust all`.
 
+`--table` `--table genomes` and `--table clusters` produce a table with basic data about whatever you asked for. 
 
+`--network` Your options are `D` to output a network in .tsv format of the doroghazi metrics. Cutoffs are currently not applied. You will need to specify a type with `--type phos` or `--type nrps`
+
+#Examples
+
+`python conductor.py --genome all_my_genomes/*.gb --genbank` <- Adds all the genbank genomes to the database.
+`python conductor.py --scan` <- Using the library of pHMMs karkadann knows about, record all the hits.
+`python conductor.py --call` <- Call clusters, naming and classifying them into types as you go.
+`python conductor.py --orthogroup all` <- Attach ortholog classifications to genes. Use `--orthogroup cluster` instead if you're in a hurry.
+`python conductor.py --promer` <- Calculate promer scores for all called cluster pairs. 
+`python conductor.py --uclust all` <- Calculates domain_max scores inside types, as they're currently undefined across types.
+`python conductor.py --network D --type nrps > nrps.tsv` <- Outputs a .tsv-format file to standard output, which can be redirected to a .tsv file and imported into cytoscape or excel or what have you. 
+
+
+#Installation quirks
+
+Remember to set the location of your pHMM library and orthomcl installation in karkadann.cfg.
 
 #Development details
 I've documented all the function signatures here but the API is still half-baked and subject to change. At some point there'll be a set of functions that are available for export and guaranteed not to change, but that point is not today.
