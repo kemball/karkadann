@@ -60,9 +60,14 @@ if args.genome:
 if args.scan:
 	before = time()
 	with get_cursor() as cur:
-		cur.execute("select distinct a.id from assemblies as a where a.id not in "
+		if not args.force:
+			cur.execute("select distinct a.id from assemblies as a where a.id not in "
 		            "(select distinct assembly_id from contigs join genes on genes.contig=contigs.id "
 		            "join hits on hits.gene = genes.id);")
+		else:
+			print "Re-scanning all genomes"
+			cur.execute("delete from hits;")
+			cur.execute("select distinct a.id from assemblies;")
 		assems = Assembly.get_many([x for (x,) in cur.fetchall()])
 	assems = list(assems)
 	p = mp.Pool(processes= min(args.cores//3,len(assems)))
@@ -177,7 +182,7 @@ if args.network:
 			# if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
 			return "\t".join(map(str,row))
 		p = mp.Pool(processes=args.cores)
-		for result in p.map(threadlet,combinations(clusters,2)):
+		for result in p.imap_unordered(threadlet,combinations(clusters,2),chunksize=100):
 			if result:
 				print result
 

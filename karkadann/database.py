@@ -538,7 +538,7 @@ class Cluster(dbThing):
 	def by_kind(cls, cluster_kind):
 		with get_cursor() as cur:
 			cur.execute("select distinct id from clusters where classification=%s;", (cluster_kind,))
-			return Cluster.get_many([x for (x,) in cur.fetchall()])
+			return Cluster.get_many((x for (x,) in cur.fetchall()))
 
 	@property
 	def gene_list(self):

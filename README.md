@@ -49,6 +49,18 @@ A complete rewrite of the GCF software and pipeline.
 
 Remember to set the location of your pHMM library and orthomcl installation in karkadann.cfg.
 
+
+#Troubleshooting
+
+This is just an incomplete list of all the things that can go wrong.
+
+If `--promer` crashes with a mysql exception about not having enough connections, karkadann is trying to use too many database connections in parallel. Either up your number of allowed connections for the main database(the default is 151) or use `--cores 20` to limit the parallelization. 
+
+Don't worry about 'BiopythonExperimentalWarning'.
+
+If `--network` is taking a really long time and not using much system resources, check if mummer is getting called. If it is, the promer_scores are being calculated on the fly and one at a time. Pause the process(or quit, or don't pause, they should all work) and run `--promer --type interesting_classification` to do the number-crunching in the background.
+If mummer's not being called it's probably just taking a long time. It's not that fast.
+
 #Development details
 I've documented all the function signatures here but the API is still half-baked and subject to change. At some point there'll be a set of functions that are available for export and guaranteed not to change, but that point is not today.
 
