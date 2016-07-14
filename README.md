@@ -37,11 +37,17 @@ A complete rewrite of the GCF software and pipeline.
 #Examples
 
 `python conductor.py --genome all_my_genomes/*.gb --genbank` <- Adds all the genbank genomes to the database.
+
 `python conductor.py --scan` <- Using the library of pHMMs karkadann knows about, record all the hits.
+
 `python conductor.py --call` <- Call clusters, naming and classifying them into types as you go.
+
 `python conductor.py --orthogroup all` <- Attach ortholog classifications to genes. Use `--orthogroup cluster` instead if you're in a hurry.
+
 `python conductor.py --promer` <- Calculate promer scores for all called cluster pairs. 
+
 `python conductor.py --uclust all` <- Calculates domain_max scores inside types, as they're currently undefined across types.
+
 `python conductor.py --network D --type nrps > nrps.tsv` <- Outputs a .tsv-format file to standard output, which can be redirected to a .tsv file and imported into cytoscape or excel or what have you. 
 
 
