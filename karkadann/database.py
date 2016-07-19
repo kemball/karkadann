@@ -375,10 +375,10 @@ class Gene(dbThing):
 	@staticmethod
 	def _save_many(genes_iterable):
 		with get_cursor() as cur:
-			tuples = [(x._translation, x._start, x._end, x._strand, x._contig, x._acc) for x in genes_iterable]
-			cur.executemany(
-				"insert into genes (translation, start, end, strand, contig, accession) values (%s,%s,%s,%s,%s,%s);",
-				tuples)
+			for x in genes_iterable:
+				tup =(x._translation, x._start, x._end, x._strand, x._contig, x._acc)
+				cur.execute("insert into genes (translation, start, end, strand, contig, accession) values (%s,%s,%s,%s,%s,%s);",tup)
+				x._id = cur.lastrowid
 
 	@cursor_required
 	def is_real(self, cur=None):

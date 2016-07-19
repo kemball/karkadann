@@ -4,7 +4,7 @@ from time import time
 import karkadann
 from karkadann.promer import promer_score
 from karkadann.database import *
-from karkadann.assimilate import assimilate_from_ncbi,assimilate_from_fasta
+from karkadann.assimilate import assimilate_from_ncbi,assimilate_from_fasta,assimilate_from_antismash
 from karkadann.hmm import scan_assembly
 from karkadann.cluster_call import call_clusters
 from karkadann.domains import assign_groups, ortho_score
@@ -21,6 +21,8 @@ inputtype = parser.add_mutually_exclusive_group()
 inputtype.add_argument('--fasta', action="store_true",help="Specify a file is in fasta format")
 inputtype.add_argument('--genbank',action="store_true",help="Specify a file is in genbank format")
 parser.add_argument('--genome',nargs='+',type=str,help="A list of paths to the genomes to import. ")
+
+parser.add_argument("--antismash",nargs='+',type=str,help="A directory containing antismash results to import.")
 
 parser.add_argument("--scan",action="store_true",help="scan all unscanned genomes")
 
@@ -57,6 +59,9 @@ if args.genome:
 	else:
 		parser.error("What kind of genome file is that? I'm not prepared to guess.")
 	p.close()
+if args.antismash:
+	for adir in args.antismash:
+		assimilate_from_antismash(adir)
 if args.scan:
 	before = time()
 	with get_cursor() as cur:

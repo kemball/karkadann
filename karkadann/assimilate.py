@@ -2,7 +2,7 @@ from Bio import SeqIO
 from Bio import SeqFeature,BiopythonWarning
 from Bio.Alphabet import IUPAC
 import warnings
-from database import Assembly, Genome, Contig, Gene
+from database import Assembly, Genome, Contig, Gene,Cluster
 from prodigal import annotate
 import re
 import os
@@ -53,7 +53,7 @@ list_of_culture_collections = [
 def _slug(text, aggressiveness=2):
     # check for allcaps+numbers words?
     # those are usually strain names or culture collections
-    # TODO put culture collection hitns into the names table.
+    # TODO put culture collection hints into the names table.
     if aggressiveness > 24:
         return _slug(text, aggressiveness=7) + "".join(sample(ascii_lowercase, 5))
     m = re.search(r'\s([A-Z0-9]+)\s', text)
@@ -185,6 +185,56 @@ def assimilate_from_fasta(fastafile,genome_name=None):
         ng.delete()
         raise
     return ng
+
+def assimilate_from_antismash(antismashdir):
+    asfiles = os.listdir(antismashdir)
+    ltags = {}
+    for fname in asfiles:
+        if ".final.gbk" in fname:
+            records = list(SeqIO.parse(os.path.join(antismashdir,fname),'genbank',alphabet=IUPAC.IUPACAmbiguousDNA()))
+            make_standard(records)
+            gname = fname[:-len(".final.gbk")]
+            try:
+                ng = Genome(genome_name=gname)
+                ng.save()
+            except IntegrityError:
+                gname += "_" + "".join(sample(ascii_lowercase, 5))
+                ng = Genome(genome_name=gname)
+                ng.save()
+            na = Assembly(record=records,genome=ng)
+            na.save()
+            for record in records:
+                newcontig = Contig(seq=str(record.seq), assembly=na, accession=record.id)
+                newcontig.save()
+                gene_iterable = []
+                for feat in record.features:
+                    if feat.type == "CDS":
+                        newgene = Gene(translation=feat.qualifiers['translation'][0],
+                                       contig=newcontig,
+                                       start=int(feat.location.start),
+                                       end=int(feat.location.end),
+                                       strand=int(feat.location.strand),
+                                       accession=None)
+                        ltags[feat.qualifiers["locus_tag"][0]] = newgene
+                        gene_iterable.append(newgene)
+                Gene._save_many(gene_iterable)
+                for gene in gene_iterable:
+                    if not gene.is_real():
+                        print "panic panic gene %s is nto real what" % gene._id
+            break
+    for fname in asfiles:
+        if ".final.gbk" not in fname and ".gbk" in fname:
+            crec = SeqIO.read(os.path.join(antismashdir,fname),'genbank')
+            name = crec.id
+            gene_list = []
+            type = "unknown"
+            for feat in crec.features:
+                if feat.type=="CDS":
+                    gene_list.append(ltags[feat.qualifiers["locus_tag"][0]])
+                elif feat.type=="cluster":
+                    type = feat.qualifiers["product"][0]
+            nc = Cluster(gene_list=gene_list,name=name,classification=type)
+            nc.save()
 
 
 if __name__ == "__main__":
