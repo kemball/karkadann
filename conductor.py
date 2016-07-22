@@ -233,10 +233,12 @@ if args.export:
 					assembly = Assembly.get(aid)
 			with get_cursor() as cur:
 				cur.execute(
-					"select distinct genes.contig,min(genes.start),max(genes.end) from genes join clusters on clusters.gene = genes.id "
+					"select min(genes.start),max(genes.end) from genes join clusters on clusters.gene = genes.id "
 					" where clusters.id=%s;", (clust._id,))
-				cid,small, big = cur.fetchone()
-			contig = Contig.get(cid)
+				small, big = cur.fetchone()
+				cur.execute("select distinct genes.contig from genes join clusters on clusters.gene=genes.id where clusters.id=%s;",(clust._id,))
+				cid = cur.fetchone()[0]
+				contig = Contig.get(cid)
 			for record in assembly.record():
 				if record.id == contig.acc():
 					print record[small:big].format("genbank")
