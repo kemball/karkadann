@@ -83,5 +83,13 @@ class AssimilateTest(ut.TestCase):
 		ng2.delete()
 
 
+class AntiSmashTest(ut.TestCase):
+	testasfile = os.path.join(data_location,'test/testfile')
+
+	def test_antismash(self):
+		ng = assimilate_from_antismash(self.testasfile)
+		self.assertGreater(ng.is_real())
+		ng.delete()
+
 if __name__ == "__main__":
 	ut.main()
