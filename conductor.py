@@ -208,7 +208,6 @@ if args.network:
 			if result:
 				print result
 if args.export:
-	print args.export
 	if args.type and args.type == "fasta":
 		with get_cursor() as cur:
 			names = ",".join(args.export)
@@ -219,9 +218,11 @@ if args.export:
 	else:
 		# genbank format
 		with get_cursor() as cur:
-			names = ",".join(args.export)
-			cur.execute("select id from cluster_names where name in (%s);", (names,))
+
+			query = "select id from cluster_names where name in (%s);" % (",".join(["%s" for x in args.export]))
+			cur.execute(query, args.export)
 			clusts = Cluster.get_many([x for (x,) in cur.fetchall()])
+		clusts = list(clusts)
 		for clust in clusts:
 			with get_cursor() as cur:
 				cur.execute("select distinct assemblies.id from contigs join genes on genes.contig=contigs.id "
