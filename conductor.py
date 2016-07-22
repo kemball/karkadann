@@ -233,9 +233,9 @@ if args.export:
 					assembly = Assembly.get(aid)
 			with get_cursor() as cur:
 				cur.execute(
-					"select min(genes.start),max(genes.end),contigs.id from genes join clusters on clusters.gene = genes.id "
-					"join contigs on contigs.id = genes.contig where clusters.id=%s;", (clust._id,))
-				small, big, cid = cur.fetchone()
+					"select distinct genes.contig,min(genes.start),max(genes.end) from genes join clusters on clusters.gene = genes.id "
+					" where clusters.id=%s;", (clust._id,))
+				cid,small, big = cur.fetchone()
 			contig = Contig.get(cid)
 			for record in assembly.record():
 				if record.id == contig.acc():

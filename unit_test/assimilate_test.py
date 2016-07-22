@@ -88,7 +88,7 @@ class AntiSmashTest(ut.TestCase):
 
 	def test_antismash(self):
 		ng = assimilate_from_antismash(self.testasfile)
-		self.assertGreater(ng.is_real())
+		self.assertGreater(ng.is_real(),0)
 		ng.delete()
 
 if __name__ == "__main__":
