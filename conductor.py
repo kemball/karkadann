@@ -216,6 +216,7 @@ if args.export:
 		for clust in clusts:
 			print clust.fna()
 	else:
+		from karkadann.prodigal import annotate
 		# genbank format
 		with get_cursor() as cur:
 
@@ -240,6 +241,7 @@ if args.export:
 				cid = cur.fetchone()[0]
 				contig = Contig.get(cid)
 			for record in assembly.record():
-				if record.id == contig.acc():
-					print record[small:big].format("genbank")
+				arec = annotate(record)
+				if arec.id == contig.acc():
+					print arec[small:big].format("genbank")
 
