@@ -243,5 +243,6 @@ if args.export:
 			arec = annotate(assembly.record(),preserve_anno=True)
 			for rec in arec:
 				if rec.seq==contig.seq():
+					rec.id = clust.name
 					print rec[small:big].format("genbank")
 
