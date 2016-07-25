@@ -240,8 +240,8 @@ if args.export:
 				cur.execute("select distinct genes.contig from genes join clusters on clusters.gene=genes.id where clusters.id=%s;",(clust._id,))
 				cid = cur.fetchone()[0]
 				contig = Contig.get(cid)
-			for record in assembly.record():
-				arec = annotate(record)
-				if arec.id == contig.acc():
-					print arec[small:big].format("genbank")
+			arec = annotate(assembly.record(),preserve_anno=True)
+			for rec in arec:
+				if rec.seq==contig.seq():
+					print rec[small:big].format("genbank")
 
