@@ -216,7 +216,6 @@ if args.export:
 		for clust in clusts:
 			print clust.fna()
 	else:
-		from karkadann.prodigal import annotate
 		# genbank format
 		with get_cursor() as cur:
 
@@ -225,24 +224,33 @@ if args.export:
 			clusts = Cluster.get_many([x for (x,) in cur.fetchall()])
 		clusts = list(clusts)
 		for clust in clusts:
-			with get_cursor() as cur:
-				cur.execute("select distinct assemblies.id from contigs join genes on genes.contig=contigs.id "
-				            "join assemblies on assemblies.id=contigs.assembly_id "
-				            "join clusters on clusters.gene=genes.id "
-				            "where clusters.id=%s;", (clust._id,))
-				for aid in cur.fetchone():
-					assembly = Assembly.get(aid)
-			with get_cursor() as cur:
-				cur.execute(
-					"select min(genes.start),max(genes.end) from genes join clusters on clusters.gene = genes.id "
-					" where clusters.id=%s;", (clust._id,))
-				small, big = cur.fetchone()
-				cur.execute("select distinct genes.contig from genes join clusters on clusters.gene=genes.id where clusters.id=%s;",(clust._id,))
-				cid = cur.fetchone()[0]
-				contig = Contig.get(cid)
-			arec = annotate(assembly.record(),preserve_anno=True)
-			for rec in arec:
-				if rec.seq==contig.seq():
-					rec.id = clust.name
-					print rec[small:big].format("genbank")
+			print clust.genbank()
+
+def families(group):
+	allclusts = list(Cluster.by_kind(group))
+	families = [[x] for x in allclusts]
+	def cutoffpass(clustera,clusterb):
+		oscore = ortho_score(clustera,clusterb)
+		if oscore < .5:
+			return False
+		pscore = promer_score(clustera,clusterb)
+		if pscore <.5:
+			return False
+		dscore = domain_max(clustera,clusterb)
+		if dscore <.7:
+			return False
+		return True
+	shouldstop = False
+	while not shouldstop:
+		shouldstop = True
+		singletons = [x[0] for x in families if len(x)==1]
+		for sin in singletons:
+			for family in families:
+				for member in family:
+					if cutoffpass(member,sin):
+						families.remove([sin])
+						family.append(sin)
+						shouldstop = False
+	return families
+
 

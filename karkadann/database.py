@@ -540,6 +540,15 @@ class Cluster(dbThing):
 			cur.execute("select distinct id from clusters where classification=%s;", (cluster_kind,))
 			return Cluster.get_many((x for (x,) in cur.fetchall()))
 
+	@classmethod
+	def by_name(cls,name):
+		with get_cursor() as cur:
+			cur.execute("select distinct id from cluster_names where name = %s;",(name,))
+			clist = list(Cluster.get_many((x for (x,) in cur.fetchall())))
+			if clist:
+				return clist
+			return None
+
 	@property
 	def gene_list(self):
 		return self._gene_list
@@ -603,6 +612,28 @@ class Cluster(dbThing):
 			contigseq = Seq(cur.fetchone()[0], alphabet=IUPAC.IUPACAmbiguousDNA)[beginning:end]
 			contig = SeqRecord.SeqRecord(seq=contigseq, id=str(self._id))
 			return contig
+
+	def genbank(self):
+		with get_cursor() as cur:
+			cur.execute("select distinct assemblies.id from contigs join genes on genes.contig=contigs.id "
+			            "join assemblies on assemblies.id=contigs.assembly_id "
+			            "join clusters on clusters.gene=genes.id "
+			            "where clusters.id=%s;", (self._id,))
+			for aid in cur.fetchone():
+				assembly = Assembly.get(aid)
+		with get_cursor() as cur:
+			cur.execute(
+				"select min(genes.start),max(genes.end) from genes join clusters on clusters.gene = genes.id "
+				" where clusters.id=%s;", (self._id,))
+			small, big = cur.fetchone()
+			cur.execute("select distinct genes.contig from genes join clusters on clusters.gene=genes.id where clusters.id=%s;",(self._id,))
+			cid = cur.fetchone()[0]
+			contig = Contig.get(cid)
+		arec = assembly.record()
+		for rec in arec:
+			if str(rec.seq)==contig.seq():
+				rec.id = self.name
+				return rec[small:big].format("genbank")
 
 
 @cursor_required

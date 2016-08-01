@@ -382,6 +382,17 @@ class ClusterTest(ut.TestCase):
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())
 
+	def test_by_name(self):
+		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass",name="testamycin_1")
+		newcluster.save()
+		try:
+			oc = Cluster.by_name("testamycin_1")
+			self.assertTrue(len(oc))
+			self.assertTrue(all([x.is_real() for x in oc]))
+		finally:
+			newcluster.delete()
+
+
 	def test_get_fna(self):
 		newcluster = Cluster(gene_list=list(self.contig.genes()), classification="testclass")
 		newcluster.save()
@@ -414,6 +425,16 @@ class ClusterTest(ut.TestCase):
 			newcluster.delete()
 		self.assertFalse(newcluster.is_real())
 		self.assertFalse(othercluster.is_real())
+
+	def test_get_genbank(self):
+		glist = list(self.contig.genes())
+		newcluster = Cluster(gene_list=glist, classification="testclass")
+		newcluster.save()
+		try:
+			gb = newcluster.genbank()
+			self.assertGreater(len(gb),0)
+		finally:
+			newcluster.delete()
 
 
 class domainTest(ut.TestCase):
