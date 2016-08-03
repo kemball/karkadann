@@ -223,7 +223,7 @@ def assimilate_from_antismash(antismashdir):
                         print "panic panic gene %s is nto real what" % gene._id
             break
     for fname in asfiles:
-        #A cluster file, not the whole genome
+        # A cluster file, not the whole genome
         if ".final.gbk" not in fname and ".gbk" in fname:
             crec = SeqIO.read(os.path.join(antismashdir,fname),'genbank')
             gene_list = []
@@ -233,7 +233,7 @@ def assimilate_from_antismash(antismashdir):
                     gene_list.append(ltags[feat.qualifiers["locus_tag"][0]])
                 elif feat.type=="cluster":
                     type = feat.qualifiers["product"][0]
-            nc = Cluster(gene_list=gene_list,classification=type)
+            nc = Cluster(gene_list=gene_list,classification=type.strip())
             nc.save()
     return ng
 

@@ -633,7 +633,7 @@ class Cluster(dbThing):
 		for rec in arec:
 			if str(rec.seq)==contig.seq():
 				rec.id = self.name
-				return rec[small:big].format("genbank")
+				return rec[small:big]
 
 
 @cursor_required
