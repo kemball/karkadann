@@ -194,13 +194,8 @@ def assimilate_from_antismash(antismashdir):
             records = list(SeqIO.parse(os.path.join(antismashdir,fname),'genbank',alphabet=IUPAC.IUPACAmbiguousDNA()))
             make_standard(records)
             gname = fname[:-len(".final.gbk")]
-            try:
-                ng = Genome(genome_name=gname)
-                ng.save()
-            except IntegrityError:
-                gname += "_" + "".join(sample(ascii_lowercase, 5))
-                ng = Genome(genome_name=gname)
-                ng.save()
+            descdir = " ".join(re.split("[_\W]+",antismashdir))
+            ng = _save_unique(gname +" " +descdir)
             na = Assembly(record=records,genome=ng)
             na.save()
             for record in records:

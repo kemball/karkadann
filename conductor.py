@@ -55,6 +55,8 @@ if args.cores:
 	karkadann.database.num_cores = args.cores
 
 with get_cursor() as cur:
+	# this doesn't work because of permissions, but it's worth trying anyway.
+	# Sad.
 	cur.execute("set @max_connections = 10000;")
 
 if args.genome:
