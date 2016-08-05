@@ -10,6 +10,7 @@ from karkadann.cluster_call import call_clusters
 from karkadann.domains import assign_groups, ortho_score
 from karkadann.uclust import calc_domain_max
 from itertools import combinations
+from karkadann.puremedian import  pure_median_identity
 
 import argparse
 
@@ -201,14 +202,35 @@ if args.network:
 			dmaxscore = domain_max(ca, cb)
 			pscore = promer_score(ca, cb)
 			row = [ca._id, ca.name, "D-metric", cb._id, cb.name, doroghazi_metric(ca, cb), oscore, dmaxscore, pscore]
-			# if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
-			return "\t".join(map(str, row))
+			if oscore>=.5 and dmaxscore>=.7 and pscore >=.5:
+				return "\t".join(map(str, row))
 
 
 		p = mp.Pool(processes=args.cores)
 		for result in p.imap_unordered(threadlet, combinations(clusters, 2), chunksize=100):
 			if result:
 				print result
+	elif args.network == "all":
+		with get_cursor() as cur:
+			cur.execute("select distinct id from clusters;")
+			clusters = Cluster.get_many([x for (x,) in cur.fetchall()])
+		print "\t".join(
+			["caid", "caname", "metric", "cbid", "cbname", "orthoscore", "pure_domain_maxscore", "promerscore"])
+
+
+		def threadlet((ca, cb)):
+			oscore = ortho_score(ca, cb)
+			pmscore = pure_median_identity(ca, cb)
+			pscore = promer_score(ca, cb)
+			row = [ca._id, ca.name, "all-metric", cb._id, cb.name, oscore, pmscore, pscore]
+			return "\t".join(map(str, row))
+
+
+		p = mp.Pool(processes=args.cores)
+		for results in p.imap_unordered(threadlet, combinations(clusters, 2)):
+			if results:
+				print results
+
 if args.export:
 	if args.type and args.type == "fasta":
 		with get_cursor() as cur:
