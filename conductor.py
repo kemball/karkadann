@@ -85,7 +85,7 @@ if args.scan:
 		assems = Assembly.get_many([x for (x,) in cur.fetchall()])
 	assems = list(assems)
 	p = mp.Pool(processes=min(args.cores // 3, len(assems)+1) )
-	p.map(scan_assembly, assems)
+	map(scan_assembly, assems)
 	p.close()
 	print "%s assemblies scanned in %s seconds." % (len(assems), before - time())
 
