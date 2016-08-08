@@ -31,6 +31,16 @@ key_hmms = {"PKS_KS", "bt1fas", "ft1fas", "hg1D", "hg1E", "fabH", "tra_KS", "PKS
 
 
 def pure_median_identity(clustera,clusterb):
+	with get_cursor() as cur:
+		cur.execute("select score from pure_median where l = %s and r= %s;",(clustera._id,clusterb._id))
+		for res in cur:
+			return res[0]
+		pmid = _pure_median_identity(clustera,clusterb)
+		cur.execute("replace into pure_median (score,l,r) values (%s,%s,%s);",(pmid,clustera._id,clusterb._id))
+		return pmid
+
+
+def _pure_median_identity(clustera,clusterb):
 	ahits = {g:g.hits() for g in clustera.gene_list}
 	bhits = {g:g.hits() for g in clusterb.gene_list}
 
