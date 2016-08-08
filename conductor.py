@@ -71,6 +71,7 @@ if args.genome:
 	p.close()
 if args.antismash:
 	for adir in args.antismash:
+		print adir
 		assimilate_from_antismash(adir)
 if args.scan:
 	before = time()
