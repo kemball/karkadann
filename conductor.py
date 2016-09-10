@@ -9,8 +9,9 @@ from karkadann.hmm import scan_assembly
 from karkadann.cluster_call import call_clusters
 from karkadann.domains import assign_groups, ortho_score
 from karkadann.uclust import calc_domain_max
-from itertools import combinations
 from karkadann.puremedian import  pure_median_identity
+import numpy as np
+from itertools import combinations
 
 import argparse
 
@@ -34,6 +35,7 @@ parser.add_argument("--orthogroup", choices=["cluster", "all"],
                     help="do allvall blast and declare orthogroups for genes."
                          " 'cluster' to just do genes in an identified cluster")
 parser.add_argument("--promer", action="store_true", help="calculate all uncalculated promer scores for clusters.")
+parser.add_argument("--pure_median",action="store_true",help="calculate all uncalculated pure_domain_max scores for clusters.")
 
 parser.add_argument("--uclust", choices=karkadann.cluster_call.types_of_clusters + ["all"],
                     help="calculate the domain_max scores"
@@ -127,6 +129,20 @@ if args.orthogroup:
 		parser.exit("Which genes should I calculate orthogroups for? options are 'cluster' and 'all'")
 	assign_groups(genes)
 	print "assigned orthogroups in %s seconds" % (before - time())
+if args.pure_median:
+	before = time()
+	with get_cursor() as cur:
+		cur.execute("select distinct id from clusters;")
+		clusters = list(Cluster.get_many([x for (x,) in cur.fetchall()]))
+	def splat_pm(args):
+		return pure_median_identity(*args)
+	p = mp.Pool(processes=args.cores)
+	arglist = []
+	for ca, cb in combinations(clusters, 2):
+		arglist.append((ca, cb))
+	p.map(splat_pm, arglist)
+	p.close()
+	print "%s pure_domain_max scores calculated in %s seconds" % (len(arglist), time() - before)
 if args.promer:
 	before = time()
 	if not args.type:
@@ -251,31 +267,54 @@ if args.export:
 		for clust in clusts:
 			print clust.genbank()
 
-def families(group):
-	allclusts = list(Cluster.by_kind(group))
-	families = [[x] for x in allclusts]
-	def cutoffpass(clustera,clusterb):
-		oscore = ortho_score(clustera,clusterb)
-		if oscore < .5:
-			return False
-		pscore = promer_score(clustera,clusterb)
-		if pscore <.5:
-			return False
-		dscore = domain_max(clustera,clusterb)
-		if dscore <.7:
-			return False
-		return True
+def families(orthocut=.5,promercut=.5,domaincut=.7):
+	with get_cursor() as cur:
+		cur.execute("select distinct id from clusters;")
+		allclusts = list(Cluster.get_many([x for (x,) in cur.fetchall()]))
+	famlist = []	
+	def cutoffpass(a,b):
+		oscore = ortho_score(a,b)
+		if oscore>=orthocut:
+			return True
+		pscore = promer_score(a,b)
+		if pscore>=promercut:
+			return True
+		dscore = pure_median_identity(a,b)
+		if dscore>.7:
+			return True
+		return False
+	connections=np.ones((len(allclusts),len(allclusts)),dtype=bool)
+	for (a,b) in combinations(allclusts,2):
+		if cutoffpass(a,b):
+			aindex = allclusts.index(a)
+			bindex = allclusts.index(b)
+			connections[aindex][bindex]=True
+			connections[bindex][aindex]=True
+	singletons = []
+	for x in range(len(allclusts)):
+		if not any([connections[x]]):
+			singletons.append(x)
+
 	shouldstop = False
+	famlist = [set([c]) for c in range(0,len(allclusts)) if c not in singletons]
+	def the_same(fam_one,fam_two):
+		for x in fam_one:
+			for y in fam_two:
+				if connections[x][y]:
+					return True
+		return False
 	while not shouldstop:
-		shouldstop = True
-		singletons = [x[0] for x in families if len(x)==1]
-		for sin in singletons:
-			for family in families:
-				for member in family:
-					if cutoffpass(member,sin):
-						families.remove([sin])
-						family.append(sin)
-						shouldstop = False
+		shouldstop=True
+		for fam_one,fam_two in combinations(famlist,2):
+			if the_same(fam_one,fam_two):
+				fam_one |= fam_two
+				famlist.remove(fam_two)
+				shouldstop = False
+				break
+
+	families = []
+	for fam in famlist:
+		families.append([allclusts[x] for x in fam])
 	return families
 
 

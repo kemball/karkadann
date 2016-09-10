@@ -9,6 +9,7 @@ from shutil import rmtree
 import os
 from tempfile import mkdtemp
 import subprocess as sp
+from database import get_cursor
 
 
 _gapscores = MatrixInfo.blosum62
